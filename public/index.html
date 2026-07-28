@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外勞用餐自動化系統</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+  <style>
+    /* Tabs styling adapted to glassmorphism */
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: none; }
+    .tab-btn { 
+      padding: 12px 24px; cursor: pointer; border: none; font-size: 1.1rem; font-weight: 600; 
+      background: var(--glass-bg); color: var(--text-secondary); border-radius: var(--border-radius-md);
+      backdrop-filter: blur(16px); transition: var(--transition-smooth); box-shadow: var(--glass-shadow);
+    }
+    .tab-btn:hover { background: var(--glass-bg-hover); box-shadow: var(--glass-shadow-hover); transform: translateY(-2px); }
+    .tab-btn.active { background: var(--color-blue); color: white; transform: translateY(-2px); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeUp 0.4s ease-out; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .print-only { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #guard-tab, #guard-tab * { visibility: visible; }
+      #guard-tab { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print, .tabs, .app-header { display: none !important; }
+      .print-only { display: block !important; }
+    }
+    
+    .toggle-checkbox { transform: scale(1.5); cursor: pointer; accent-color: var(--color-blue); }
+    
+    /* Settings Form */
+    .settings-form { max-width: 600px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-secondary); }
+    .form-group input { 
+      width: 100%; padding: 12px 16px; border: 1px solid var(--glass-border); 
+      border-radius: var(--border-radius-sm); background: rgba(255,255,255,0.6);
+      font-size: 1.1rem; outline: none; transition: var(--transition-smooth);
+    }
+    .form-group input:focus { border-color: var(--color-blue); background: #fff; box-shadow: 0 0 0 3px rgba(10,132,255,0.2); }
+    
+    .btn-primary {
+      padding: 12px 28px; background: var(--color-blue); color: white; border: none; 
+      border-radius: var(--border-radius-md); font-size: 1.1rem; font-weight: 600; 
+      cursor: pointer; transition: var(--transition-bounce); box-shadow: 0 4px 14px rgba(10,132,255,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(10,132,255,0.4); }
+    
+    .btn-success { background: var(--color-green); box-shadow: 0 4px 14px rgba(48,209,88,0.3); }
+    .btn-success:hover { box-shadow: 0 6px 20px rgba(48,209,88,0.4); }
+
+    .summary-box { 
+      margin-bottom: 20px; padding: 20px; font-size: 1.1rem; display: flex; gap: 30px; 
+      background: var(--glass-bg); backdrop-filter: blur(16px); border-radius: var(--border-radius-md);
+      box-shadow: var(--glass-shadow); border: 1px solid var(--glass-border);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container no-print">
+    <header class="app-header">
+      <div class="header-left">
+        <h1><span style="font-weight: 300;">外勞用餐</span> <strong>自動化系統</strong></h1>
+        <span class="badge" style="background: var(--color-blue); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; margin-left: 15px;">V1.1</span>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('guard')">🧑‍✈️ 警衛版 (訂餐)</button>
+      <button class="tab-btn" onclick="switchTab('admin')">👩‍💼 總務版 (設定)</button>
+      <button class="tab-btn" onclick="switchTab('finance')">💰 財務版 (結算)</button>
+    </div>
+  </div>
+
+  <!-- Guard Tab -->
+  <div id="guard-tab" class="tab-content active">
+    <div class="app-container">
+      
+      <!-- Stats Grid (Restored Glassmorphism) -->
+      <section class="stats-grid no-print" style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div id="card-lunch" class="card stat-card" onclick="setFilter('lunch')" style="cursor: pointer; padding: 20px; border-radius: var(--border-radius-xl); background: var(--glass-bg); backdrop-filter: blur(16px); box-shadow: var(--glass-shadow); display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; border: 2px solid transparent;">
+          <div class="card-icon blue" style="background: rgba(10,132,255,0.15); color: var(--color-blue); padding: 15px; border-radius: 50%;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+          </div>
+          <div class="card-info">
+            <span class="card-label" style="color: var(--text-secondary); font-size: 0.95rem;">午餐總數</span>
+            <h2 class="card-value" id="val-lunch" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
+          </div>
+        </div>
+        <div id="card-dinner" class="card stat-card" onclick="setFilter('dinner')" style="cursor: pointer; padding: 20px; border-radius: var(--border-radius-xl); background: var(--glass-bg); backdrop-filter: blur(16px); box-shadow: var(--glass-shadow); display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; border: 2px solid transparent;">
+          <div class="card-icon orange" style="background: rgba(255,159,10,0.15); color: var(--color-orange); padding: 15px; border-radius: 50%;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+          </div>
+          <div class="card-info">
+            <span class="card-label" style="color: var(--text-secondary); font-size: 0.95rem;">晚餐總數</span>
+            <h2 class="card-value" id="val-dinner" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
+          </div>
+        </div>
+        <div id="card-present" class="card stat-card" onclick="setFilter('present')" style="cursor: pointer; padding: 20px; border-radius: var(--border-radius-xl); background: var(--glass-bg); backdrop-filter: blur(16px); box-shadow: var(--glass-shadow); display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; border: 2px solid transparent;">
+          <div class="card-icon green" style="background: rgba(48,209,88,0.15); color: var(--color-green); padding: 15px; border-radius: 50%;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+          </div>
+          <div class="card-info">
+            <span class="card-label" style="color: var(--text-secondary); font-size: 0.95rem;">已打卡</span>
+            <h2 class="card-value" id="val-present" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
+          </div>
+        </div>
+        <div id="card-absent" class="card stat-card" onclick="setFilter('absent')" style="cursor: pointer; padding: 20px; border-radius: var(--border-radius-xl); background: var(--glass-bg); backdrop-filter: blur(16px); box-shadow: var(--glass-shadow); display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; border: 2px solid transparent;">
+          <div class="card-icon red" style="background: rgba(255,69,58,0.15); color: var(--color-red); padding: 15px; border-radius: 50%;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+          </div>
+          <div class="card-info">
+            <span class="card-label" style="color: var(--text-secondary); font-size: 0.95rem;">未打卡</span>
+            <h2 class="card-value" id="val-absent" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
+          </div>
+        </div>
+        <div id="card-leave" class="card stat-card" onclick="setFilter('leave')" style="cursor: pointer; padding: 20px; border-radius: var(--border-radius-xl); background: var(--glass-bg); backdrop-filter: blur(16px); box-shadow: var(--glass-shadow); display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; border: 2px solid transparent;">
+          <div class="card-icon orange" style="background: rgba(255,159,10,0.15); color: var(--color-orange); padding: 15px; border-radius: 50%;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          </div>
+          <div class="card-info">
+            <span class="card-label" style="color: var(--text-secondary); font-size: 0.95rem;">請假中</span>
+            <h2 class="card-value" id="val-leave" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
+          </div>
+        </div>
+      </section>
+
+      <main class="main-content">
+        <section class="panel-left card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 25px; box-shadow: var(--glass-shadow);">
+          <div class="panel-header no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h3 id="list-title" style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;">📋 今日名單</h3>
+            <div>
+              <button onclick="loadMeals()" class="btn-primary" style="background: var(--glass-bg); color: var(--text-primary); margin-right: 15px;">🔄 重新整理</button>
+              <button onclick="window.print()" class="btn-primary btn-success">🖨️ 一鍵列印</button>
+            </div>
+          </div>
+          
+          <h2 class="print-only">今日訂餐清單 - <span id="print-date"></span></h2>
+          
+          <!-- Summary Box for Printing -->
+          <div id="meal-summary" class="summary-box">
+            <!-- populated by JS -->
+          </div>
+
+          <div class="table-container" style="overflow-x: auto;">
+            <table id="table-meals" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;">
+              <thead>
+                <tr style="color: var(--text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">工號</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">姓名</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">類別</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午餐</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚餐</th>
+                </tr>
+              </thead>
+              <tbody id="meals-tbody" style="font-size: 1.05rem;">
+                <tr><td colspan="7" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Admin Tab -->
+  <div id="admin-tab" class="tab-content">
+    <div class="app-container">
+      <section class="card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow); max-width: 600px; margin: 0 auto;">
+        <h2 style="margin-top: 0; margin-bottom: 25px;">⚙️ 餐費設定 (總務專區)</h2>
+        
+        <form class="settings-form" id="settings-form" style="width: 100%;">
+          <div class="form-group">
+            <label>便當單價 (元)</label>
+            <input type="number" id="set-bento" required>
+          </div>
+          <div class="form-group">
+            <label>台灣員工伙食津貼 (月/元)</label>
+            <input type="number" id="set-tw" required>
+          </div>
+          <div class="form-group">
+            <label>外籍假日未加班津貼 (日/元)</label>
+            <input type="number" id="set-fr-0" required>
+          </div>
+          <div class="form-group">
+            <label>外籍假日加班 8hr 津貼 (日/元)</label>
+            <input type="number" id="set-fr-8" required>
+          </div>
+          <div class="form-group">
+            <label>外籍假日加班 10hr+ 津貼 (日/元)</label>
+            <input type="number" id="set-fr-10" required>
+          </div>
+          <div style="margin-top: 30px; text-align: right;">
+            <button type="submit" class="btn-primary">儲存設定</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- Finance Tab -->
+  <div id="finance-tab" class="tab-content">
+    <div class="app-container">
+      <section class="card finance-card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 40px; box-shadow: var(--glass-shadow); max-width: 500px; margin: 50px auto;">
+        <div style="font-size: 3rem; margin-bottom: 20px;">📊</div>
+        <h2 style="margin-top: 0;">匯出作帳用 Excel</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 30px;">請選擇結算年月，系統將自動為您計算全公司的伙食扣款與津貼報表。</p>
+        
+        <div style="margin-bottom: 30px;">
+          <input type="month" id="export-month" class="form-group" style="padding: 12px 20px; font-size: 1.2rem; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); width: 80%; max-width: 250px;">
+        </div>
+        
+        <button onclick="exportExcel()" class="btn-primary" style="width: 80%; max-width: 250px;">📥 點此下載 Excel</button>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId + '-tab').classList.add('active');
+      event.target.classList.add('active');
+      if (tabId === 'admin') loadSettings();
+    }
+
+    const today = new Date();
+    document.getElementById('print-date').innerText = today.toLocaleDateString('zh-TW');
+    document.getElementById('export-month').value = today.toISOString().substring(0, 7);
+
+    let currentSettings = {};
+
+    async function loadSettings() {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      currentSettings = data;
+      
+      document.getElementById('set-bento').value = data.bento_price || 60;
+      document.getElementById('set-tw').value = data.taiwanese_meal_allowance || 1800;
+      document.getElementById('set-fr-0').value = data.foreign_holiday_allowance || 100;
+      document.getElementById('set-fr-8').value = data.foreign_holiday_ot_8hr_allowance || 125;
+      document.getElementById('set-fr-10').value = data.foreign_holiday_ot_10hr_allowance || 150;
+    }
+
+      async function updateDiet(empId, dietType) {
+        try {
+          await fetch('/api/employees/diet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId, dietType })
+          });
+          // Update local data and re-render
+          const emp = allEmployeesData.find(e => e.empId === String(empId));
+          if (emp) emp.dietType = dietType;
+          renderTable();
+        } catch (error) {
+          console.error('Error updating diet:', error);
+        }
+      }
+
+      async function updateOptOut(empId, type, isChecked) {
+        try {
+          const emp = allEmployeesData.find(e => e.empId === String(empId));
+          if (!emp) return;
+          
+          if (type === 'lunch') emp.optOutLunch = isChecked;
+          if (type === 'dinner') emp.optOutDinner = isChecked;
+
+          // Also update today's checkbox for immediate feedback
+          if (type === 'lunch' && isChecked) {
+              emp.hasLunch = false;
+              updateMeal(empId, false, emp.hasDinner);
+          }
+          if (type === 'dinner' && isChecked) {
+              emp.hasDinner = false;
+              updateMeal(empId, emp.hasLunch, false);
+          }
+
+          await fetch('/api/employees/optout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId, optOutLunch: emp.optOutLunch, optOutDinner: emp.optOutDinner })
+          });
+          
+          renderTable();
+        } catch (error) {
+          console.error('Error updating opt-out:', error);
+        }
+      }
+
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      currentSettings['bento_price'] = document.getElementById('set-bento').value;
+      currentSettings['taiwanese_meal_allowance'] = document.getElementById('set-tw').value;
+      currentSettings['foreign_holiday_allowance'] = document.getElementById('set-fr-0').value;
+      currentSettings['foreign_holiday_ot_8hr_allowance'] = document.getElementById('set-fr-8').value;
+      currentSettings['foreign_holiday_ot_10hr_allowance'] = document.getElementById('set-fr-10').value;
+      
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentSettings)
+      });
+      alert('設定已儲存！');
+    });
+
+    let allEmployeesData = [];
+    let currentFilterStatus = 'all';
+
+    function setFilter(status) {
+      if (currentFilterStatus === status) {
+        currentFilterStatus = 'all'; // toggle off
+      } else {
+        currentFilterStatus = status;
+      }
+      
+      // Update styling on cards
+      document.querySelectorAll('.stat-card').forEach(el => {
+        el.style.transform = 'scale(1)';
+        el.style.boxShadow = 'var(--glass-shadow)';
+        el.style.opacity = currentFilterStatus === 'all' ? '1' : '0.4';
+        el.style.border = '2px solid transparent';
+      });
+      
+      if (currentFilterStatus !== 'all') {
+        const targetCard = document.getElementById(`card-${currentFilterStatus}`);
+        if (targetCard) {
+          const colors = {
+            'lunch': 'var(--color-blue)',
+            'dinner': 'var(--color-orange)',
+            'present': 'var(--color-green)',
+            'absent': 'var(--color-red)',
+            'leave': 'var(--color-orange)'
+          };
+          targetCard.style.transform = 'scale(1.03)';
+          targetCard.style.boxShadow = `0 8px 32px rgba(0,0,0,0.2)`;
+          targetCard.style.opacity = '1';
+          targetCard.style.border = `2px solid ${colors[currentFilterStatus]}`;
+        }
+      }
+      
+      renderTable();
+    }
+
+    async function loadMeals() {
+      const scrollPos = window.scrollY;
+      const tbody = document.getElementById('meals-tbody');
+      // Show loading text only if empty to prevent flickering on updates
+      if (tbody.innerHTML.trim() === '') {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td></tr>';
+      }
+      try {
+        const res = await fetch('/api/meals/today');
+        const data = await res.json();
+        if (data.error) throw new Error(data.message);
+        
+        allEmployeesData = data.data;
+        renderTable();
+        window.scrollTo(0, scrollPos);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color: var(--color-red);">載入失敗: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('meals-tbody');
+        tbody.innerHTML = '';
+        
+        
+        // Set title with date
+        const todayDateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        document.getElementById('list-title').innerHTML = `📋 今日名單 <span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">(${todayDateStr})</span>`;
+        
+        let counts = {
+          lunch: { '葷食':0, '素食':0, '不吃豬':0, '不吃牛':0, '不吃羊':0, '齋戒':0 },
+          dinner: { '葷食':0, '素食':0, '不吃豬':0, '不吃牛':0, '不吃羊':0, '齋戒':0 }
+        };
+        let lunchTotal = 0, dinnerTotal = 0, presentCount = 0, leaveCount = 0, absentCount = 0;
+        
+        let absentEmps = [];
+        let leaveEmps = [];
+        let presentEmps = [];
+        let lunchEmps = [];
+        let dinnerEmps = [];
+
+        allEmployeesData.forEach(emp => {
+          let catStr = emp.dietType;
+          if (emp.hasLunch) {
+            lunchTotal++;
+            lunchEmps.push(emp);
+            if (counts.lunch[catStr] !== undefined) counts.lunch[catStr]++;
+            else counts.lunch['葷食']++;
+          }
+          if (emp.hasDinner) {
+            dinnerTotal++;
+            dinnerEmps.push(emp);
+            if (counts.dinner[catStr] !== undefined) counts.dinner[catStr]++;
+            else counts.dinner['葷食']++;
+          }
+
+          let actualStatus = emp.status; // 'present', 'leave', or 'absent'
+
+          if (actualStatus === 'present') {
+              presentCount++;
+              presentEmps.push(emp);
+          } else if (actualStatus === 'leave') {
+              leaveCount++;
+              leaveEmps.push(emp);
+          } else {
+              absentCount++;
+              absentEmps.push(emp);
+          }
+        });
+
+        const createRow = (emp) => {
+          let catStr = emp.dietType;
+          let catColor = 'var(--text-secondary)';
+          if (catStr === '素食') catColor = 'var(--color-green)';
+          else if (catStr === '不吃豬') catColor = 'var(--color-orange)';
+          else if (catStr === '不吃牛') catColor = '#8b4513';
+          else if (catStr === '不吃羊') catColor = '#d2691e';
+          else if (catStr === '齋戒') catColor = 'var(--color-purple)';
+
+          const tr = document.createElement('tr');
+          
+          let statusHtml = '';
+          const formatTime = (timeStr) => timeStr ? (timeStr.includes(' ') ? timeStr.split(' ')[1].substring(0,5) : (timeStr.includes('T') ? timeStr.split('T')[1].substring(0,5) : timeStr)) : '';
+          const ct = formatTime(emp.cardTime);
+
+          if (emp.status === 'leave') {
+             const reason = emp.leaveInfo.reason;
+             const leaveTime = `${emp.leaveInfo.start}~${emp.leaveInfo.end}`;
+             const cardText = ct ? ` (已刷卡 ${ct})` : '';
+             statusHtml = `<span style="display: inline-block; padding: 4px 10px; background: rgba(255,159,10,0.15); color: var(--color-orange); border-radius: 12px; font-weight: 600; font-size: 0.85rem;">請假中 ${reason} ${leaveTime}${cardText}</span>`;
+          } else if (emp.status === 'present') {
+             statusHtml = `<span style="display: inline-block; padding: 4px 10px; background: rgba(48,209,88,0.15); color: var(--color-green); border-radius: 12px; font-weight: 600; font-size: 0.9rem;">已打卡 (${ct})</span>`;
+          } else {
+             statusHtml = `<span style="display: inline-block; padding: 4px 10px; background: rgba(255,69,58,0.15); color: var(--color-red); border-radius: 12px; font-weight: 600; font-size: 0.9rem;">未到</span>`;
+          }
+
+          tr.innerHTML = `
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.empNo}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 500;">${emp.name}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">${emp.deptName}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">
+              <select onchange="updateDiet('${emp.empId}', this.value)" style="padding: 5px; border-radius: 5px; font-weight: bold; color: ${catColor}; border: 1px solid var(--glass-border); background: var(--glass-bg);">
+                <option value="葷食" ${catStr==='葷食'?'selected':''} style="color:#333;">葷食</option>
+                <option value="素食" ${catStr==='素食'?'selected':''} style="color:#333;">素食</option>
+                <option value="不吃豬" ${catStr==='不吃豬'?'selected':''} style="color:#333;">不吃豬</option>
+                <option value="不吃牛" ${catStr==='不吃牛'?'selected':''} style="color:#333;">不吃牛</option>
+                <option value="不吃羊" ${catStr==='不吃羊'?'selected':''} style="color:#333;">不吃羊</option>
+                <option value="齋戒" ${catStr==='齋戒'?'selected':''} style="color:#333;">齋戒</option>
+              </select>
+              <div style="margin-top: 8px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-secondary);">
+                  <input type="checkbox" onchange="updateOptOut('${emp.empId}', 'lunch', this.checked)" ${emp.optOutLunch ? 'checked' : ''}> 預設不訂午餐
+                </label>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-secondary);">
+                  <input type="checkbox" onchange="updateOptOut('${emp.empId}', 'dinner', this.checked)" ${emp.optOutDinner ? 'checked' : ''}> 預設不訂晚餐
+                </label>
+              </div>
+            </td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${statusHtml}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasLunch ? 'checked' : ''} onchange="updateMeal('${emp.empId}', this.checked, ${emp.hasDinner})"></td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasDinner ? 'checked' : ''} onchange="updateMeal('${emp.empId}', ${emp.hasLunch}, this.checked)"></td>
+          `;
+          return tr;
+        };
+        
+        if (currentFilterStatus === 'all') {
+            if (absentEmps.length > 0) {
+                const h = document.createElement('tr');
+                h.innerHTML = `<td colspan="7" style="background: rgba(255,69,58,0.08); color: var(--color-red); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">未打卡人員 (${absentEmps.length} 人)</td>`;
+                tbody.appendChild(h);
+                absentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+            }
+
+            if (leaveEmps.length > 0) {
+                const h = document.createElement('tr');
+                h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">請假中人員 (${leaveEmps.length} 人)</td>`;
+                tbody.appendChild(h);
+                leaveEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+            }
+        } else if (currentFilterStatus === 'absent') {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(255,69,58,0.08); color: var(--color-red); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">未打卡人員 (${absentEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            absentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'leave') {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">請假中人員 (${leaveEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            leaveEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'present') {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(48,209,88,0.08); color: var(--color-green); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">已打卡人員 (${presentEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            presentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'lunch') {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(10,132,255,0.08); color: var(--color-blue); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日午餐名單 (${lunchEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            lunchEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'dinner') {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 (${dinnerEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            dinnerEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        }
+
+        document.getElementById('val-lunch').innerText = lunchTotal;
+        document.getElementById('val-dinner').innerText = dinnerTotal;
+        document.getElementById('val-present').innerText = presentCount;
+        document.getElementById('val-absent').innerText = absentCount;
+        document.getElementById('val-leave').innerText = leaveCount;
+
+        document.getElementById('meal-summary').innerHTML = `
+          <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
+            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-blue);">🍱 午餐總計: ${lunchTotal} 個</div>
+            <div style="color: var(--text-secondary); line-height: 1.6;">
+              葷食: <strong>${counts.lunch['葷食']}</strong> | 素食: <strong>${counts.lunch['素食']}</strong> | 不吃豬: <strong>${counts.lunch['不吃豬']}</strong><br>
+              不吃牛: <strong>${counts.lunch['不吃牛']}</strong> | 不吃羊: <strong>${counts.lunch['不吃羊']}</strong> | 齋戒: <strong>${counts.lunch['齋戒']}</strong>
+            </div>
+          </div>
+          <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
+            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-orange);">🌙 晚餐總計: ${dinnerTotal} 個</div>
+            <div style="color: var(--text-secondary); line-height: 1.6;">
+              葷食: <strong>${counts.dinner['葷食']}</strong> | 素食: <strong>${counts.dinner['素食']}</strong> | 不吃豬: <strong>${counts.dinner['不吃豬']}</strong><br>
+              不吃牛: <strong>${counts.dinner['不吃牛']}</strong> | 不吃羊: <strong>${counts.dinner['不吃羊']}</strong> | 齋戒: <strong>${counts.dinner['齋戒']}</strong>
+            </div>
+          </div>
+        `;
+    }
+
+    async function updateMeal(empId, hasLunch, hasDinner) {
+      await fetch('/api/meals/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empId, hasLunch, hasDinner })
+      });
+      loadMeals(); 
+    }
+
+    function exportExcel() {
+      const month = document.getElementById('export-month').value.replace('-', '/');
+      window.location.href = `/api/export/excel?yyyymm=${month}`;
+    }
+
+    // Init
+    loadSettings().then(() => loadMeals());
+  </script>
+</body>
+</html>
