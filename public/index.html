@@ -69,9 +69,10 @@
     </header>
 
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('guard')">🧑‍✈️ 警衛版 (訂餐)</button>
-      <button class="tab-btn" onclick="switchTab('admin')">👩‍💼 總務版 (設定)</button>
-      <button class="tab-btn" onclick="switchTab('finance')">💰 財務版 (結算)</button>
+      <button class="tab-btn active" onclick="switchTab('guard')">🧑‍✈️ 警衛 (訂餐)</button>
+      <button class="tab-btn" onclick="switchTab('admin')">👩‍💼 總務 (設定)</button>
+      <button class="tab-btn" onclick="switchTab('finance')">💰 財務 (結算)</button>
+      <button class="tab-btn" onclick="switchTab('query')">🔍 查詢 (唯讀)</button>
     </div>
   </div>
 
@@ -132,9 +133,10 @@
         <section class="panel-left card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 25px; box-shadow: var(--glass-shadow);">
           <div class="panel-header no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <h3 id="list-title" style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;">📋 今日名單</h3>
-            <div>
+            <div style="display: flex; align-items: center;">
+              <input type="text" id="guard-search" placeholder="🔍 搜尋工號或姓名..." style="padding: 10px 16px; margin-right: 15px; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.6); font-size: 1rem; width: 220px; outline: none; transition: 0.3s;" oninput="renderTable()" onfocus="this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.2)'" onblur="this.style.background='rgba(255,255,255,0.6)'; this.style.boxShadow='none'">
               <button onclick="loadMeals()" class="btn-primary" style="background: var(--glass-bg); color: var(--text-primary); margin-right: 15px;">🔄 重新整理</button>
-              <button onclick="window.print()" class="btn-primary btn-success">🖨️ 一鍵列印</button>
+              <button onclick="backendPrint()" class="btn-primary btn-success">🖨️ 列印</button>
             </div>
           </div>
           
@@ -152,7 +154,12 @@
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">工號</th>
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">姓名</th>
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
-                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">類別</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">
+                    類別
+                    <div class="tooltip no-print">?
+                      <span class="tooltiptext">「預設不訂」是決定每天要不要自動訂餐。<br>若某天臨時想訂，只要在右側「午餐/晚餐」欄位打勾即可。<br>隔天就不會自動訂餐！</span>
+                    </div>
+                  </th>
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午餐</th>
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚餐</th>
@@ -220,6 +227,44 @@
     </div>
   </div>
 
+  <!-- Query Tab (Read-Only) -->
+  <div id="query-tab" class="tab-content">
+    <div class="app-container">
+      <section class="panel-left card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 25px; box-shadow: var(--glass-shadow);">
+        <h2 style="margin-top: 0; margin-bottom: 25px;">🔍 歷史查詢 (唯讀)</h2>
+        <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+          <span style="color: var(--text-secondary); font-weight: 500;">區間:</span>
+          <input type="date" id="q-start-date" class="form-group" style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <span style="color: var(--text-secondary);">~</span>
+          <input type="date" id="q-end-date" class="form-group" style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <input type="text" id="q-empno" placeholder="請輸入工號" class="form-group" style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <input type="text" id="q-name" placeholder="請輸入姓名" class="form-group" style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <button onclick="executeQuery()" class="btn-primary" style="padding: 10px 20px;">查詢</button>
+        </div>
+
+        <div class="table-container" style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;">
+            <thead>
+              <tr style="color: var(--text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">日期</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">工號</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">姓名</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">類別</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午餐</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚餐</th>
+              </tr>
+            </thead>
+            <tbody id="query-tbody" style="font-size: 1.05rem;">
+              <tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--text-muted);">請設定條件後點擊查詢</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <script>
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -247,7 +292,21 @@
       document.getElementById('set-fr-10').value = data.foreign_holiday_ot_10hr_allowance || 150;
     }
 
+    let isGuardUnlocked = false;
+    function checkPassword() {
+        if (isGuardUnlocked) return true;
+        const pwd = prompt('請輸入密碼以解鎖修改權限：');
+        if (pwd === '5252') {
+            isGuardUnlocked = true;
+            return true;
+        }
+        if (pwd !== null) alert('密碼錯誤！');
+        renderTable(); 
+        return false;
+    }
+
       async function updateDiet(empId, dietType) {
+        if (!checkPassword()) return;
         try {
           await fetch('/api/employees/diet', {
             method: 'POST',
@@ -264,6 +323,7 @@
       }
 
       async function updateOptOut(empId, type, isChecked) {
+        if (!checkPassword()) return;
         try {
           const emp = allEmployeesData.find(e => e.empId === String(empId));
           if (!emp) return;
@@ -328,7 +388,8 @@
       });
       
       if (currentFilterStatus !== 'all') {
-        const targetCard = document.getElementById(`card-${currentFilterStatus}`);
+        const baseStatus = currentFilterStatus.split('-')[0];
+        const targetCard = document.getElementById(`card-${baseStatus}`);
         if (targetCard) {
           const colors = {
             'lunch': 'var(--color-blue)',
@@ -340,7 +401,7 @@
           targetCard.style.transform = 'scale(1.03)';
           targetCard.style.boxShadow = `0 8px 32px rgba(0,0,0,0.2)`;
           targetCard.style.opacity = '1';
-          targetCard.style.border = `2px solid ${colors[currentFilterStatus]}`;
+          targetCard.style.border = `2px solid ${colors[baseStatus]}`;
         }
       }
       
@@ -388,7 +449,12 @@
         let lunchEmps = [];
         let dinnerEmps = [];
 
-        allEmployeesData.forEach(emp => {
+        const queryStr = document.getElementById('guard-search') ? document.getElementById('guard-search').value.trim().toLowerCase() : '';
+        const filteredData = queryStr 
+            ? allEmployeesData.filter(emp => (emp.empNo || emp.empId || '').toLowerCase().includes(queryStr) || (emp.name || emp.empName || '').toLowerCase().includes(queryStr)) 
+            : allEmployeesData;
+
+        filteredData.forEach(emp => {
           let catStr = emp.dietType;
           if (emp.hasLunch) {
             lunchTotal++;
@@ -511,6 +577,20 @@
             h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 (${dinnerEmps.length} 人)</td>`;
             tbody.appendChild(h);
             dinnerEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus.startsWith('lunch-')) {
+            const diet = currentFilterStatus.split('-')[1];
+            const filteredEmps = lunchEmps.filter(e => e.dietType === diet);
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(10,132,255,0.08); color: var(--color-blue); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日午餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus.startsWith('dinner-')) {
+            const diet = currentFilterStatus.split('-')[1];
+            const filteredEmps = dinnerEmps.filter(e => e.dietType === diet);
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
         }
 
         document.getElementById('val-lunch').innerText = lunchTotal;
@@ -519,25 +599,42 @@
         document.getElementById('val-absent').innerText = absentCount;
         document.getElementById('val-leave').innerText = leaveCount;
 
+        const getLunchStyle = (filterId) => currentFilterStatus === filterId 
+            ? 'cursor:pointer; background: var(--color-blue); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; text-decoration: none;' 
+            : 'cursor:pointer; text-decoration:underline;';
+        
+        const getDinnerStyle = (filterId) => currentFilterStatus === filterId 
+            ? 'cursor:pointer; background: var(--color-orange); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; text-decoration: none;' 
+            : 'cursor:pointer; text-decoration:underline;';
+
         document.getElementById('meal-summary').innerHTML = `
           <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
-            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-blue);">🍱 午餐總計: ${lunchTotal} 個</div>
+            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-blue); cursor: pointer;" onclick="setFilter('lunch')">🍱 午餐總計: ${lunchTotal} 個</div>
             <div style="color: var(--text-secondary); line-height: 1.6;">
-              葷食: <strong>${counts.lunch['葷食']}</strong> | 素食: <strong>${counts.lunch['素食']}</strong> | 不吃豬: <strong>${counts.lunch['不吃豬']}</strong><br>
-              不吃牛: <strong>${counts.lunch['不吃牛']}</strong> | 不吃羊: <strong>${counts.lunch['不吃羊']}</strong> | 齋戒: <strong>${counts.lunch['齋戒']}</strong>
+              <span style="${getLunchStyle('lunch-葷食')}" onclick="setFilter('lunch-葷食')">葷食: <strong>${counts.lunch['葷食']}</strong></span> | 
+              <span style="${getLunchStyle('lunch-素食')}" onclick="setFilter('lunch-素食')">素食: <strong>${counts.lunch['素食']}</strong></span> | 
+              <span style="${getLunchStyle('lunch-不吃豬')}" onclick="setFilter('lunch-不吃豬')">不吃豬: <strong>${counts.lunch['不吃豬']}</strong></span><br>
+              <span style="${getLunchStyle('lunch-不吃牛')}" onclick="setFilter('lunch-不吃牛')">不吃牛: <strong>${counts.lunch['不吃牛']}</strong></span> | 
+              <span style="${getLunchStyle('lunch-不吃羊')}" onclick="setFilter('lunch-不吃羊')">不吃羊: <strong>${counts.lunch['不吃羊']}</strong></span> | 
+              <span style="${getLunchStyle('lunch-齋戒')}" onclick="setFilter('lunch-齋戒')">齋戒: <strong>${counts.lunch['齋戒']}</strong></span>
             </div>
           </div>
           <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
-            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-orange);">🌙 晚餐總計: ${dinnerTotal} 個</div>
+            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-orange); cursor: pointer;" onclick="setFilter('dinner')">🌙 晚餐總計: ${dinnerTotal} 個</div>
             <div style="color: var(--text-secondary); line-height: 1.6;">
-              葷食: <strong>${counts.dinner['葷食']}</strong> | 素食: <strong>${counts.dinner['素食']}</strong> | 不吃豬: <strong>${counts.dinner['不吃豬']}</strong><br>
-              不吃牛: <strong>${counts.dinner['不吃牛']}</strong> | 不吃羊: <strong>${counts.dinner['不吃羊']}</strong> | 齋戒: <strong>${counts.dinner['齋戒']}</strong>
+              <span style="${getDinnerStyle('dinner-葷食')}" onclick="setFilter('dinner-葷食')">葷食: <strong>${counts.dinner['葷食']}</strong></span> | 
+              <span style="${getDinnerStyle('dinner-素食')}" onclick="setFilter('dinner-素食')">素食: <strong>${counts.dinner['素食']}</strong></span> | 
+              <span style="${getDinnerStyle('dinner-不吃豬')}" onclick="setFilter('dinner-不吃豬')">不吃豬: <strong>${counts.dinner['不吃豬']}</strong></span><br>
+              <span style="${getDinnerStyle('dinner-不吃牛')}" onclick="setFilter('dinner-不吃牛')">不吃牛: <strong>${counts.dinner['不吃牛']}</strong></span> | 
+              <span style="${getDinnerStyle('dinner-不吃羊')}" onclick="setFilter('dinner-不吃羊')">不吃羊: <strong>${counts.dinner['不吃羊']}</strong></span> | 
+              <span style="${getDinnerStyle('dinner-齋戒')}" onclick="setFilter('dinner-齋戒')">齋戒: <strong>${counts.dinner['齋戒']}</strong></span>
             </div>
           </div>
         `;
     }
 
     async function updateMeal(empId, hasLunch, hasDinner) {
+      if (!checkPassword()) return;
       await fetch('/api/meals/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -551,8 +648,167 @@
       window.location.href = `/api/export/excel?yyyymm=${month}`;
     }
 
+    async function backendPrint() {
+        const btn = document.querySelector('button[onclick="backendPrint()"]');
+        if (!btn) return;
+        
+        // 預設列印時自動切換至午餐或晚餐清單
+        if (typeof currentFilterStatus !== 'undefined' && currentFilterStatus === 'all') {
+            const hour = new Date().getHours();
+            if (hour >= 13) {
+                setFilter('dinner');
+            } else {
+                setFilter('lunch');
+            }
+        }
+
+        const oldText = btn.innerHTML;
+        btn.innerHTML = '🖨️ 傳送中...';
+        btn.disabled = true;
+
+        try {
+            let styles = '';
+            for (let sheet of document.styleSheets) {
+                try {
+                    for (let rule of sheet.cssRules) {
+                        styles += rule.cssText + '\\n';
+                    }
+                } catch(e) {}
+            }
+
+            document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.print-only').forEach(el => el.style.display = 'block');
+
+            const mainContent = document.querySelector('.main-content').outerHTML;
+
+            document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+            document.querySelectorAll('.print-only').forEach(el => el.style.display = '');
+
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>今日訂餐清單</title>
+                    <style>
+                        ${styles}
+                        body { background: white; padding: 20px; font-family: sans-serif; }
+                        .no-print { display: none !important; }
+                        .print-only { display: block !important; }
+                    </style>
+                </head>
+                <body>
+                    ${mainContent}
+                </body>
+                </html>
+            `;
+
+            const res = await fetch('/api/print', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ htmlContent })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert('🖨️ ' + data.message);
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            alert('列印失敗: ' + err.message);
+        } finally {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
+    }
+
     // Init
-    loadSettings().then(() => loadMeals());
+    loadSettings().then(() => {
+        loadMeals();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yStr = yesterday.toISOString().split('T')[0];
+        document.getElementById('q-start-date').value = yStr;
+        document.getElementById('q-end-date').value = yStr;
+    });
+
+    async function executeQuery() {
+        const qStart = document.getElementById('q-start-date').value;
+        const qEnd = document.getElementById('q-end-date').value;
+        const qEmpno = document.getElementById('q-empno').value.trim().toLowerCase();
+        const qName = document.getElementById('q-name').value.trim().toLowerCase();
+        const tbody = document.getElementById('query-tbody');
+
+        if (!qStart || !qEnd) {
+            alert("請選擇開始與結束日期！");
+            return;
+        }
+
+        const sDate = new Date(qStart);
+        const eDate = new Date(qEnd);
+        if (eDate < sDate) {
+            alert("結束日期不能早於開始日期！");
+            return;
+        }
+
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--text-muted);">查詢中，請稍候...</td></tr>';
+        
+        try {
+            const url = `/api/meals/today?startDate=${qStart}&endDate=${qEnd}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.error) throw new Error(data.message);
+            
+            let filtered = data.data;
+            if (qEmpno) filtered = filtered.filter(e => e.empNo && e.empNo.toLowerCase().includes(qEmpno));
+            if (qName) filtered = filtered.filter(e => e.name && e.name.toLowerCase().includes(qName));
+
+            // Sort by Date, then by EmpNo
+            filtered.sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                if (a.empNo && b.empNo) return a.empNo.localeCompare(b.empNo);
+                return 0;
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--text-muted);">查無符合條件的資料</td></tr>';
+                return;
+            }
+
+            filtered.forEach(emp => {
+                const tr = document.createElement('tr');
+                
+                let statusHtml = '';
+                const formatTime = (timeStr) => timeStr ? (timeStr.includes(' ') ? timeStr.split(' ')[1].substring(0,5) : (timeStr.includes('T') ? timeStr.split('T')[1].substring(0,5) : timeStr)) : '';
+                const ct = formatTime(emp.cardTime);
+
+                if (emp.status === 'leave') {
+                    const reason = emp.leaveInfo.reason;
+                    statusHtml = `<span style="color: var(--color-orange); font-weight: 600; font-size: 0.85rem;">請假中 ${reason}</span>`;
+                } else if (emp.status === 'present') {
+                    statusHtml = `<span style="color: var(--color-green); font-weight: 600; font-size: 0.9rem;">已打卡 (${ct})</span>`;
+                } else {
+                    statusHtml = `<span style="color: var(--color-red); font-weight: 600; font-size: 0.9rem;">未到</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); font-weight: 500;">${emp.date || ''}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.empNo}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 500;">${emp.name}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">${emp.deptName}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: bold;">${emp.dietType}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${statusHtml}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--color-blue); font-weight: bold;">${emp.hasLunch ? '✔️' : ''}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--color-orange); font-weight: bold;">${emp.hasDinner ? '✔️' : ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--color-red);">查詢失敗: ${err.message}</td></tr>`;
+        }
+    }
   </script>
 </body>
 </html>

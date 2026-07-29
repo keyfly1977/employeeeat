@@ -4,7 +4,8 @@ const path = require('path');
 const db = require('./db');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Read config
@@ -80,12 +81,176 @@ function generateMockData() {
 }
 
 // Backend route to query attendance and OT, combined with local sqlite overrides
+
+// Helper to get meals for a specific date
+async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbEmps) {
+    const config = require('./config.json');
+    // 3. Fetch Clock-in comparison results
+    const cardMatchRes = await fetch(`${config.HR_API_BASE}/api/am/emp_cardmatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
+      body: JSON.stringify({ CO_ID: config.CO_ID, WORK_SDATE: targetDateStr, WORK_EDATE: targetDateStr, LIMIT: 1000 })
+    });
+    let cardMatches = [];
+    if (cardMatchRes.ok) {
+      const cardMatchResult = await cardMatchRes.json();
+      cardMatches = cardMatchResult.data || [];
+    }
+
+    // 4. Map card matches by EMP_ID
+    const cardMatchMap = new Map();
+    cardMatches.forEach(match => {
+        if (!cardMatchMap.has(match.EMP_ID) || match.CARD_DATETIME) {
+            cardMatchMap.set(match.EMP_ID, match);
+        }
+    });
+
+    // 5. Fetch Overtime (emp_ot) using OT token
+    const otRes = await fetch(`${config.HR_API_BASE}/api/am/emp_ot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otToken}` },
+      body: JSON.stringify({ CO_ID: config.CO_ID, OT_DATE: targetDateStr, LIMIT: 1000 })
+    });
+    let otRecords = [];
+    if (otRes.ok) {
+        const otResult = await otRes.json();
+        otRecords = otResult.data || [];
+    }
+    const otMap = new Map();
+    otRecords.forEach(ot => {
+        otMap.set(ot.EMP_ID, ot);
+    });
+
+    // 6. Fetch Leaves (emp_leave)
+    const leaveRes = await fetch(`${config.HR_API_BASE}/api/am/emp_leave`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
+      body: JSON.stringify({ CO_ID: config.CO_ID, LEAVE_START: targetDateStr, LEAVE_END: targetDateStr, LIMIT: 1000 })
+    });
+    let leaveRecords = [];
+    if (leaveRes.ok) {
+        const leaveResult = await leaveRes.json();
+        leaveRecords = leaveResult.data || [];
+    }
+    const leaveMap = new Map();
+    leaveRecords.forEach(leave => {
+        leaveMap.set(leave.EMP_ID, leave);
+    });
+
+    const dietMap = {};
+    const optOutLunchMap = {};
+    const optOutDinnerMap = {};
+    if (dbEmps) {
+        dbEmps.forEach(e => {
+            dietMap[e.emp_id] = e.diet_type;
+            optOutLunchMap[e.emp_id] = e.opt_out_lunch === 1;
+            optOutDinnerMap[e.emp_id] = e.opt_out_dinner === 1;
+        });
+    }
+
+    const db = require('./db');
+    const localRecords = await new Promise((resolve) => {
+        db.all(`SELECT * FROM meal_records WHERE date = ?`, [targetDateStr], (err, rows) => {
+            resolve(rows || []);
+        });
+    });
+
+    const localRecordMap = new Map();
+    localRecords.forEach(r => {
+        localRecordMap.set(r.emp_id, r);
+    });
+
+    const combinedList = employees
+    .filter(emp => {
+        const isBoard = (emp.DEPT_NAME && emp.DEPT_NAME.includes('董事'));
+        if (isBoard) return false;
+        if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return false; // 忽略 J 開頭工號
+        if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; 
+        return true;
+    })
+    .map(emp => {
+        const match = cardMatchMap.get(emp.EMP_ID);
+        const ot = otMap.get(emp.EMP_ID);
+        const leave = leaveMap.get(emp.EMP_ID);
+        const localRec = localRecordMap.get(String(emp.EMP_ID));
+
+        let status = 'absent';
+        let cardTime = null;
+        if (match && match.CARD_DATETIME) {
+            cardTime = match.CARD_DATETIME;
+            status = 'present';
+        }
+        
+        // If they have any leave today, mark status as leave (even if they clocked in)
+        if (leave) {
+            status = 'leave';
+        }
+
+        const isIndonesian = emp.NATIONALITY_NAME && emp.NATIONALITY_NAME.includes("印尼");
+        
+        // Determine diet type (priority: db > default)
+        let defaultDiet = '葷食';
+        if (isIndonesian) {
+            defaultDiet = '不吃豬';
+        }
+
+        let finalDiet = dietMap[emp.EMP_ID] || defaultDiet;
+        let optOutLunch = optOutLunchMap[emp.EMP_ID] || false;
+        let optOutDinner = optOutDinnerMap[emp.EMP_ID] || false;
+
+        let hasLunch = status === 'present';
+        let hasDinner = !!ot;
+
+        if (finalDiet === '齋戒') {
+            hasLunch = false;
+        }
+
+        if (optOutLunch) hasLunch = false;
+        if (optOutDinner) hasDinner = false;
+
+        if (localRec) {
+            hasLunch = localRec.has_lunch === 1;
+            hasDinner = localRec.has_dinner === 1;
+        }
+
+        return {
+            date: targetDateStr,
+            empId: emp.EMP_ID,
+            empNo: emp.EMP_NO,
+            name: emp.EMP_NAME,
+            deptName: emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配',
+            status,
+            cardTime,
+            leaveInfo: leave ? {
+                reason: leave.REASON || '請假',
+                start: leave.LEAVE_START ? leave.LEAVE_START.split(' ')[1].substring(0,5) : '',
+                end: leave.LEAVE_END ? leave.LEAVE_END.split(' ')[1].substring(0,5) : ''
+            } : null,
+            dietType: finalDiet,
+            optOutLunch: optOutLunch,
+            optOutDinner: optOutDinner,
+            nationality: emp.NATIONALITY_NAME || "中華民國",
+            hasLunch,
+            hasDinner,
+            hasOt: !!ot
+        };
+    });
+
+    return combinedList;
+}
+
+// Backend route to query attendance and OT, combined with local sqlite overrides
 app.get('/api/meals/today', async (req, res) => {
   const forceRefresh = req.query.refresh === 'true';
+  const queryDate = req.query.date; // Optional single date
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
   const now = Date.now();
 
-  // Return cache if valid
-  if (cachedData && (now - lastFetchTime < CACHE_DURATION) && !forceRefresh) {
+  const isRangeQuery = startDate && endDate;
+
+  // Return cache if valid (only for today's data, don't cache historical queries)
+  if (!queryDate && !isRangeQuery && cachedData && (now - lastFetchTime < CACHE_DURATION) && !forceRefresh) {
     return res.json(cachedData);
   }
 
@@ -117,66 +282,7 @@ app.get('/api/meals/today', async (req, res) => {
     const empResult = await empRes.json();
     const employees = empResult.data || [];
 
-    // Format today's date
-    const todayObj = new Date();
-    const yyyy = todayObj.getFullYear();
-    const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
-    const dd = String(todayObj.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}/${mm}/${dd}`;
-
-    // 3. Fetch Clock-in comparison results
-    const cardMatchRes = await fetch(`${config.HR_API_BASE}/api/am/emp_cardmatch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
-      body: JSON.stringify({ CO_ID: config.CO_ID, WORK_SDATE: todayStr, WORK_EDATE: todayStr, LIMIT: 1000 })
-    });
-    let cardMatches = [];
-    if (cardMatchRes.ok) {
-      const cardMatchResult = await cardMatchRes.json();
-      cardMatches = cardMatchResult.data || [];
-    }
-
-    // 4. Map card matches by EMP_ID
-    const cardMatchMap = new Map();
-    cardMatches.forEach(match => {
-        if (!cardMatchMap.has(match.EMP_ID) || match.CARD_DATETIME) {
-            cardMatchMap.set(match.EMP_ID, match);
-        }
-    });
-
-    // 5. Fetch Overtime (emp_ot) using OT token
-    const otRes = await fetch(`${config.HR_API_BASE}/api/am/emp_ot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otToken}` },
-      body: JSON.stringify({ CO_ID: config.CO_ID, OT_DATE: todayStr, LIMIT: 1000 })
-    });
-    let otRecords = [];
-    if (otRes.ok) {
-        const otResult = await otRes.json();
-        otRecords = otResult.data || [];
-    }
-    const otMap = new Map();
-    otRecords.forEach(ot => {
-        otMap.set(ot.EMP_ID, ot);
-    });
-
-    // 6. Fetch Leaves (emp_leave)
-    const leaveRes = await fetch(`${config.HR_API_BASE}/api/am/emp_leave`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
-      body: JSON.stringify({ CO_ID: config.CO_ID, LEAVE_START: todayStr, LEAVE_END: todayStr, LIMIT: 1000 })
-    });
-    let leaveRecords = [];
-    if (leaveRes.ok) {
-        const leaveResult = await leaveRes.json();
-        leaveRecords = leaveResult.data || [];
-    }
-    const leaveMap = new Map();
-    leaveRecords.forEach(leave => {
-        leaveMap.set(leave.EMP_ID, leave);
-    });
-
-    // We will sync employees to local DB
+    // Sync employees to local DB
     db.serialize(() => {
         const stmt = db.prepare(`INSERT INTO employees (emp_id, name, department, is_foreign) VALUES (?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign`);
         employees.forEach(emp => {
@@ -188,114 +294,56 @@ app.get('/api/meals/today', async (req, res) => {
         stmt.finalize();
     });
 
-    db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner FROM employees`, (err, dbEmps) => {
-        const dietMap = {};
-        const optOutLunchMap = {};
-        const optOutDinnerMap = {};
-        if (dbEmps) {
-            dbEmps.forEach(e => {
-                dietMap[e.emp_id] = e.diet_type;
-                optOutLunchMap[e.emp_id] = e.opt_out_lunch === 1;
-                optOutDinnerMap[e.emp_id] = e.opt_out_dinner === 1;
-            });
-        }
-
-        // Get local manual overrides for today
-        db.all(`SELECT * FROM meal_records WHERE date = ?`, [todayStr], (err, localRecords) => {
-            const localRecordMap = new Map();
-            if (!err && localRecords) {
-                localRecords.forEach(r => {
-                    localRecordMap.set(r.emp_id, r);
-                });
-            }
-
-            const combinedList = employees
-            .filter(emp => {
-                const isBoard = (emp.DEPT_NAME && emp.DEPT_NAME.includes('董事'));
-                if (isBoard) return false;
-                if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return false; // 忽略 J 開頭工號
-                if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; 
-                return true;
-            })
-            .map(emp => {
-                const match = cardMatchMap.get(emp.EMP_ID);
-                const ot = otMap.get(emp.EMP_ID);
-                const leave = leaveMap.get(emp.EMP_ID);
-                const localRec = localRecordMap.get(String(emp.EMP_ID));
-
-                let status = 'absent';
-                let cardTime = null;
-                if (match && match.CARD_DATETIME) {
-                    cardTime = match.CARD_DATETIME;
-                    status = 'present';
-                }
-                
-                // If they have any leave today, mark status as leave (even if they clocked in)
-                if (leave) {
-                    status = 'leave';
-                }
-
-                const isIndonesian = emp.NATIONALITY_NAME && emp.NATIONALITY_NAME.includes("印尼");
-                
-                // Determine diet type (priority: db > default)
-                let defaultDiet = '葷食';
-                if (isIndonesian) {
-                    defaultDiet = '不吃豬';
-                }
-
-                let finalDiet = dietMap[emp.EMP_ID] || defaultDiet;
-                let optOutLunch = optOutLunchMap[emp.EMP_ID] || false;
-                let optOutDinner = optOutDinnerMap[emp.EMP_ID] || false;
-
-                let hasLunch = status === 'present';
-                let hasDinner = !!ot;
-
-                // If final diet is '齋戒', they do not eat lunch
-                if (finalDiet === '齋戒') {
-                    hasLunch = false;
-                }
-
-                // Apply opt out defaults
-                if (optOutLunch) hasLunch = false;
-                if (optOutDinner) hasDinner = false;
-
-                if (localRec) {
-                    hasLunch = localRec.has_lunch === 1;
-                    hasDinner = localRec.has_dinner === 1;
-                }
-
-                return {
-                    empId: emp.EMP_ID,
-                    empNo: emp.EMP_NO,
-                    name: emp.EMP_NAME,
-                    deptName: emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配',
-                    status,
-                    cardTime,
-                    leaveInfo: leave ? {
-                        reason: leave.REASON || '請假',
-                        start: leave.LEAVE_START ? leave.LEAVE_START.split(' ')[1].substring(0,5) : '',
-                        end: leave.LEAVE_END ? leave.LEAVE_END.split(' ')[1].substring(0,5) : ''
-                    } : null,
-                    dietType: finalDiet,
-                    optOutLunch: optOutLunch,
-                    optOutDinner: optOutDinner,
-                    nationality: emp.NATIONALITY_NAME || "中華民國",
-                    hasLunch,
-                    hasDinner,
-                    hasOt: !!ot
-                };
-            });
-
-        cachedData = {
-            mock: false,
-            data: combinedList,
-            timestamp: new Date().toISOString()
-        };
-        lastFetchTime = now;
-
-        res.json(cachedData);
+    const dbEmps = await new Promise((resolve) => {
+        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner FROM employees`, (err, rows) => {
+            resolve(rows || []);
         });
     });
+
+    // Build dates array
+    let targetDates = [];
+    if (isRangeQuery) {
+        const s = new Date(startDate);
+        const e = new Date(endDate);
+        const diffTime = Math.abs(e - s);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 31) {
+            return res.json({ error: true, message: "查詢區間不可超過 31 天。" });
+        }
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            targetDates.push(`${y}/${m}/${day}`);
+        }
+    } else if (queryDate) {
+        targetDates = [queryDate.replace(/-/g, '/')];
+    } else {
+        const todayObj = new Date();
+        const yyyy = todayObj.getFullYear();
+        const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(todayObj.getDate()).padStart(2, '0');
+        targetDates = [`${yyyy}/${mm}/${dd}`];
+    }
+
+    let finalCombinedList = [];
+    for (const d of targetDates) {
+        const list = await getMealsForDate(d, mainToken, otToken, employees, dbEmps);
+        finalCombinedList = finalCombinedList.concat(list);
+    }
+
+    const responsePayload = {
+        mock: false,
+        data: finalCombinedList,
+        timestamp: new Date().toISOString()
+    };
+
+    if (!queryDate && !isRangeQuery) {
+        cachedData = responsePayload;
+        lastFetchTime = now;
+    }
+
+    res.json(responsePayload);
 
   } catch (error) {
     console.error("Error communicating with HR Server:", error.message);
@@ -429,6 +477,41 @@ app.get('/api/export/excel', async (req, res) => {
             });
         });
     });
+});
+
+// Print Endpoint
+app.post('/api/print', async (req, res) => {
+    try {
+        const { htmlContent } = req.body;
+        if (!htmlContent) return res.status(400).json({ error: "Missing HTML content" });
+        
+        const puppeteer = require('puppeteer');
+        const ptp = require('pdf-to-printer');
+
+        const browser = await puppeteer.launch({ headless: 'new' });
+        const page = await browser.newPage();
+        
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfPath = path.join(__dirname, `temp_print_${Date.now()}.pdf`);
+        await page.pdf({ 
+            path: pdfPath, 
+            format: 'A4', 
+            printBackground: true, 
+            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } 
+        });
+        
+        await browser.close();
+
+        await ptp.print(pdfPath, { printer: "RICOH MP C3503" });
+        
+        fs.unlinkSync(pdfPath);
+        
+        res.json({ success: true, message: "列印指令已發送至 RICOH MP C3503" });
+    } catch (err) {
+        console.error("Print Error:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Start server
