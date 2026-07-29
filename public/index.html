@@ -127,6 +127,15 @@
             <h2 class="card-value" id="val-leave" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
           </div>
         </div>
+        <div id="card-ramadan" class="card stat-card" onclick="setFilter('ramadan')" style="cursor: pointer; padding: 20px; border-radius: var(--border-radius-xl); background: var(--glass-bg); backdrop-filter: blur(16px); box-shadow: var(--glass-shadow); display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; border: 2px solid transparent;">
+          <div class="card-icon purple" style="background: rgba(175,82,222,0.15); color: var(--color-purple, #af52de); padding: 15px; border-radius: 50%;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </div>
+          <div class="card-info">
+            <span class="card-label" style="color: var(--text-secondary); font-size: 0.95rem;">齋戒中</span>
+            <h2 class="card-value" id="val-ramadan" style="margin: 5px 0 0; font-size: 2rem; color: var(--text-primary);">--</h2>
+          </div>
+        </div>
       </section>
 
       <main class="main-content">
@@ -202,6 +211,23 @@
             <label>外籍假日加班 10hr+ 津貼 (日/元)</label>
             <input type="number" id="set-fr-10" required>
           </div>
+          <div class="form-group">
+            <label>外籍發餐費底數 (月/元)</label>
+            <input type="number" id="set-fr-base" required>
+          </div>
+          
+          <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.1rem;">📅 齋戒月自動化設定</h3>
+          <div style="display: flex; gap: 15px;">
+            <div class="form-group" style="flex: 1;">
+              <label>齋戒月開始日期</label>
+              <input type="date" id="set-ramadan-start">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>齋戒月結束日期</label>
+              <input type="date" id="set-ramadan-end">
+            </div>
+          </div>
+          
           <div style="margin-top: 30px; text-align: right;">
             <button type="submit" class="btn-primary">儲存設定</button>
           </div>
@@ -290,6 +316,9 @@
       document.getElementById('set-fr-0').value = data.foreign_holiday_allowance || 100;
       document.getElementById('set-fr-8').value = data.foreign_holiday_ot_8hr_allowance || 125;
       document.getElementById('set-fr-10').value = data.foreign_holiday_ot_10hr_allowance || 150;
+      document.getElementById('set-fr-base').value = data.foreign_base_allowance || 1000;
+      document.getElementById('set-ramadan-start').value = data.ramadan_start || '2026-02-18';
+      document.getElementById('set-ramadan-end').value = data.ramadan_end || '2026-03-19';
     }
 
     let isGuardUnlocked = false;
@@ -313,41 +342,52 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ empId, dietType })
           });
-          // Update local data and re-render
-          const emp = allEmployeesData.find(e => e.empId === String(empId));
-          if (emp) emp.dietType = dietType;
-          renderTable();
+          loadMeals();
         } catch (error) {
           console.error('Error updating diet:', error);
         }
       }
 
       async function updateOptOut(empId, type, isChecked) {
-        if (!checkPassword()) return;
+        if (!checkPassword()) {
+            // Revert checkbox state visually since password failed
+            renderTable();
+            return;
+        }
         try {
-          const emp = allEmployeesData.find(e => e.empId === String(empId));
+          // Find the current values from the server data
+          const emp = allEmployeesData.find(e => String(e.empId) === String(empId));
           if (!emp) return;
           
           if (type === 'lunch') emp.optOutLunch = isChecked;
           if (type === 'dinner') emp.optOutDinner = isChecked;
+          if (type === 'holiday') emp.noHolidayAllowance = isChecked;
 
           // Also update today's checkbox for immediate feedback
           if (type === 'lunch' && isChecked) {
               emp.hasLunch = false;
-              updateMeal(empId, false, emp.hasDinner);
+              await fetch('/api/meals/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empId, hasLunch: false, hasDinner: emp.hasDinner })
+              });
           }
           if (type === 'dinner' && isChecked) {
               emp.hasDinner = false;
-              updateMeal(empId, emp.hasLunch, false);
+              await fetch('/api/meals/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empId, hasLunch: emp.hasLunch, hasDinner: false })
+              });
           }
 
           await fetch('/api/employees/optout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ empId, optOutLunch: emp.optOutLunch, optOutDinner: emp.optOutDinner })
+            body: JSON.stringify({ empId, optOutLunch: emp.optOutLunch, optOutDinner: emp.optOutDinner, noHolidayAllowance: emp.noHolidayAllowance })
           });
           
-          renderTable();
+          loadMeals();
         } catch (error) {
           console.error('Error updating opt-out:', error);
         }
@@ -360,6 +400,9 @@
       currentSettings['foreign_holiday_allowance'] = document.getElementById('set-fr-0').value;
       currentSettings['foreign_holiday_ot_8hr_allowance'] = document.getElementById('set-fr-8').value;
       currentSettings['foreign_holiday_ot_10hr_allowance'] = document.getElementById('set-fr-10').value;
+      currentSettings['foreign_base_allowance'] = document.getElementById('set-fr-base').value;
+      currentSettings['ramadan_start'] = document.getElementById('set-ramadan-start').value;
+      currentSettings['ramadan_end'] = document.getElementById('set-ramadan-end').value;
       
       await fetch('/api/settings', {
         method: 'POST',
@@ -448,6 +491,8 @@
         let presentEmps = [];
         let lunchEmps = [];
         let dinnerEmps = [];
+        let ramadanEmps = [];
+        let ramadanCount = 0;
 
         const queryStr = document.getElementById('guard-search') ? document.getElementById('guard-search').value.trim().toLowerCase() : '';
         const filteredData = queryStr 
@@ -456,6 +501,10 @@
 
         filteredData.forEach(emp => {
           let catStr = emp.dietType;
+          if (catStr === '齋戒') {
+            ramadanCount++;
+            ramadanEmps.push(emp);
+          }
           if (emp.hasLunch) {
             lunchTotal++;
             lunchEmps.push(emp);
@@ -511,7 +560,10 @@
 
           tr.innerHTML = `
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.empNo}</td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 500;">${emp.name}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 500;">
+              ${emp.name}
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">${emp.nationality}</div>
+            </td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">${emp.deptName}</td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">
               <select onchange="updateDiet('${emp.empId}', this.value)" style="padding: 5px; border-radius: 5px; font-weight: bold; color: ${catColor}; border: 1px solid var(--glass-border); background: var(--glass-bg);">
@@ -528,6 +580,9 @@
                 </label>
                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-secondary);">
                   <input type="checkbox" onchange="updateOptOut('${emp.empId}', 'dinner', this.checked)" ${emp.optOutDinner ? 'checked' : ''}> 預設不訂晚餐
+                </label>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-secondary);">
+                  <input type="checkbox" onchange="updateOptOut('${emp.empId}', 'holiday', this.checked)" ${emp.noHolidayAllowance ? 'checked' : ''}> 停發假日津貼
                 </label>
               </div>
             </td>
@@ -551,6 +606,12 @@
                 h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">請假中人員 (${leaveEmps.length} 人)</td>`;
                 tbody.appendChild(h);
                 leaveEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+            }
+            
+            if (presentEmps.length > 0) {
+                const h = document.createElement('tr');
+                h.innerHTML = `<td colspan="7" style="color: var(--text-secondary); padding: 20px 15px; text-align: center; font-style: italic; background: rgba(0,0,0,0.02);">💡 已隱藏 ${presentEmps.length} 名「已打卡人員」。若需查看或修改，請點擊上方綠色的「已打卡」卡片。</td>`;
+                tbody.appendChild(h);
             }
         } else if (currentFilterStatus === 'absent') {
             const h = document.createElement('tr');
@@ -591,6 +652,11 @@
             h.innerHTML = `<td colspan="7" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
             tbody.appendChild(h);
             filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'ramadan') {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="7" style="background: rgba(175,82,222,0.08); color: var(--color-purple, #af52de); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">齋戒人員名單 (${ramadanEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            ramadanEmps.forEach(emp => tbody.appendChild(createRow(emp)));
         }
 
         document.getElementById('val-lunch').innerText = lunchTotal;
@@ -598,6 +664,9 @@
         document.getElementById('val-present').innerText = presentCount;
         document.getElementById('val-absent').innerText = absentCount;
         document.getElementById('val-leave').innerText = leaveCount;
+        if (document.getElementById('val-ramadan')) {
+            document.getElementById('val-ramadan').innerText = ramadanCount;
+        }
 
         const getLunchStyle = (filterId) => currentFilterStatus === filterId 
             ? 'cursor:pointer; background: var(--color-blue); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; text-decoration: none;' 
@@ -606,6 +675,10 @@
         const getDinnerStyle = (filterId) => currentFilterStatus === filterId 
             ? 'cursor:pointer; background: var(--color-orange); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; text-decoration: none;' 
             : 'cursor:pointer; text-decoration:underline;';
+
+        const ramadanStr = (currentSettings.ramadan_start && currentSettings.ramadan_end) 
+            ? `<span style="font-size: 0.85rem; color: var(--color-orange); margin-left: 5px;">(齋戒設定: ${currentSettings.ramadan_start} ~ ${currentSettings.ramadan_end})</span>` 
+            : '';
 
         document.getElementById('meal-summary').innerHTML = `
           <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
@@ -616,7 +689,7 @@
               <span style="${getLunchStyle('lunch-不吃豬')}" onclick="setFilter('lunch-不吃豬')">不吃豬: <strong>${counts.lunch['不吃豬']}</strong></span><br>
               <span style="${getLunchStyle('lunch-不吃牛')}" onclick="setFilter('lunch-不吃牛')">不吃牛: <strong>${counts.lunch['不吃牛']}</strong></span> | 
               <span style="${getLunchStyle('lunch-不吃羊')}" onclick="setFilter('lunch-不吃羊')">不吃羊: <strong>${counts.lunch['不吃羊']}</strong></span> | 
-              <span style="${getLunchStyle('lunch-齋戒')}" onclick="setFilter('lunch-齋戒')">齋戒: <strong>${counts.lunch['齋戒']}</strong></span>
+              <span style="${getLunchStyle('lunch-齋戒')}" onclick="setFilter('lunch-齋戒')">齋戒: <strong>${counts.lunch['齋戒']}</strong></span> ${ramadanStr}
             </div>
           </div>
           <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
@@ -627,7 +700,7 @@
               <span style="${getDinnerStyle('dinner-不吃豬')}" onclick="setFilter('dinner-不吃豬')">不吃豬: <strong>${counts.dinner['不吃豬']}</strong></span><br>
               <span style="${getDinnerStyle('dinner-不吃牛')}" onclick="setFilter('dinner-不吃牛')">不吃牛: <strong>${counts.dinner['不吃牛']}</strong></span> | 
               <span style="${getDinnerStyle('dinner-不吃羊')}" onclick="setFilter('dinner-不吃羊')">不吃羊: <strong>${counts.dinner['不吃羊']}</strong></span> | 
-              <span style="${getDinnerStyle('dinner-齋戒')}" onclick="setFilter('dinner-齋戒')">齋戒: <strong>${counts.dinner['齋戒']}</strong></span>
+              <span style="${getDinnerStyle('dinner-齋戒')}" onclick="setFilter('dinner-齋戒')">齋戒: <strong>${counts.dinner['齋戒']}</strong></span> ${ramadanStr}
             </div>
           </div>
         `;

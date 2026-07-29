@@ -83,7 +83,7 @@ function generateMockData() {
 // Backend route to query attendance and OT, combined with local sqlite overrides
 
 // Helper to get meals for a specific date
-async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbEmps) {
+async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbEmps, settings) {
     const config = require('./config.json');
     // 3. Fetch Clock-in comparison results
     const cardMatchRes = await fetch(`${config.HR_API_BASE}/api/am/emp_cardmatch`, {
@@ -140,11 +140,13 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
     const dietMap = {};
     const optOutLunchMap = {};
     const optOutDinnerMap = {};
+    const noHolidayAllowanceMap = {};
     if (dbEmps) {
         dbEmps.forEach(e => {
             dietMap[e.emp_id] = e.diet_type;
             optOutLunchMap[e.emp_id] = e.opt_out_lunch === 1;
             optOutDinnerMap[e.emp_id] = e.opt_out_dinner === 1;
+            noHolidayAllowanceMap[e.emp_id] = e.no_holiday_allowance === 1;
         });
     }
 
@@ -162,10 +164,11 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
 
     const combinedList = employees
     .filter(emp => {
-        const isBoard = (emp.DEPT_NAME && emp.DEPT_NAME.includes('董事'));
+        const deptStr = emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '';
+        const isBoard = deptStr.includes('董事') || (emp.EMP_NAME && emp.EMP_NAME.includes('董事長'));
         if (isBoard) return false;
         if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return false; // 忽略 J 開頭工號
-        if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; 
+        // if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; 
         return true;
     })
     .map(emp => {
@@ -186,24 +189,45 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             status = 'leave';
         }
 
-        const isIndonesian = emp.NATIONALITY_NAME && emp.NATIONALITY_NAME.includes("印尼");
+        const isIndonesian = emp.NATIONALITY === 'ID';
+        
+        let nationalityStr = "中華民國";
+        if (emp.NATIONALITY === 'ID') nationalityStr = "印尼";
+        if (emp.NATIONALITY === 'VN') nationalityStr = "越南";
+        if (emp.NATIONALITY === 'TH') nationalityStr = "泰國";
         
         // Determine diet type (priority: db > default)
         let defaultDiet = '葷食';
+        let isRamadan = false;
         if (isIndonesian) {
             defaultDiet = '不吃豬';
+            
+            // Check Ramadan
+            if (settings && settings.ramadan_start && settings.ramadan_end) {
+                const rStart = new Date(settings.ramadan_start);
+                const rEnd = new Date(settings.ramadan_end);
+                const current = new Date(targetDateStr.replace(/\//g, '-')); // HR API returns YYYY/MM/DD
+                if (current >= rStart && current <= rEnd) {
+                    isRamadan = true;
+                }
+            }
         }
 
-        let finalDiet = dietMap[emp.EMP_ID] || defaultDiet;
+        const dbDiet = dietMap[emp.EMP_ID];
+        let finalDiet = defaultDiet;
+        if (isRamadan) finalDiet = '齋戒';
+        if (dbDiet) finalDiet = dbDiet;
+
         let optOutLunch = optOutLunchMap[emp.EMP_ID] || false;
         let optOutDinner = optOutDinnerMap[emp.EMP_ID] || false;
 
+        // Auto opt-out lunch during Ramadan ONLY IF they are actually doing Ramadan diet
+        if (isRamadan && finalDiet === '齋戒') {
+            optOutLunch = true;
+        }
+
         let hasLunch = status === 'present';
         let hasDinner = !!ot;
-
-        if (finalDiet === '齋戒') {
-            hasLunch = false;
-        }
 
         if (optOutLunch) hasLunch = false;
         if (optOutDinner) hasDinner = false;
@@ -229,7 +253,8 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             dietType: finalDiet,
             optOutLunch: optOutLunch,
             optOutDinner: optOutDinner,
-            nationality: emp.NATIONALITY_NAME || "中華民國",
+            noHolidayAllowance: noHolidayAllowanceMap[emp.EMP_ID] || false,
+            nationality: nationalityStr,
             hasLunch,
             hasDinner,
             hasOt: !!ot
@@ -287,7 +312,7 @@ app.get('/api/meals/today', async (req, res) => {
         const stmt = db.prepare(`INSERT INTO employees (emp_id, name, department, is_foreign) VALUES (?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign`);
         employees.forEach(emp => {
             if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return; // 忽略 J 開頭工號
-            const isForeign = emp.NATIONALITY_NAME && emp.NATIONALITY_NAME.includes("印尼") ? 1 : 0;
+            const isForeign = emp.NATIONALITY !== 'TW' ? 1 : 0;
             const dept = emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配';
             stmt.run(emp.EMP_ID, emp.EMP_NAME, dept, isForeign);
         });
@@ -295,8 +320,16 @@ app.get('/api/meals/today', async (req, res) => {
     });
 
     const dbEmps = await new Promise((resolve) => {
-        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner FROM employees`, (err, rows) => {
+        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, no_holiday_allowance FROM employees`, (err, rows) => {
             resolve(rows || []);
+        });
+    });
+
+    const settings = await new Promise((resolve) => {
+        db.all(`SELECT key, value FROM settings`, (err, rows) => {
+            const map = {};
+            if (rows) rows.forEach(r => map[r.key] = r.value);
+            resolve(map);
         });
     });
 
@@ -328,7 +361,7 @@ app.get('/api/meals/today', async (req, res) => {
 
     let finalCombinedList = [];
     for (const d of targetDates) {
-        const list = await getMealsForDate(d, mainToken, otToken, employees, dbEmps);
+        const list = await getMealsForDate(d, mainToken, otToken, employees, dbEmps, settings);
         finalCombinedList = finalCombinedList.concat(list);
     }
 
@@ -365,9 +398,9 @@ app.post('/api/employees/diet', (req, res) => {
 
 // Update employee meal opt-out defaults
 app.post('/api/employees/optout', (req, res) => {
-    const { empId, optOutLunch, optOutDinner } = req.body;
-    db.run(`UPDATE employees SET opt_out_lunch = ?, opt_out_dinner = ? WHERE emp_id = ?`, 
-        [optOutLunch ? 1 : 0, optOutDinner ? 1 : 0, empId], 
+    const { empId, optOutLunch, optOutDinner, noHolidayAllowance } = req.body;
+    db.run(`UPDATE employees SET opt_out_lunch = ?, opt_out_dinner = ?, no_holiday_allowance = ? WHERE emp_id = ?`, 
+        [optOutLunch ? 1 : 0, optOutDinner ? 1 : 0, noHolidayAllowance ? 1 : 0, empId], 
         function(err) {
             if (err) {
                 return res.status(500).json({ success: false, error: err.message });

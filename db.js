@@ -40,6 +40,7 @@ db.serialize(() => {
     });
     db.run(`ALTER TABLE employees ADD COLUMN opt_out_lunch INTEGER DEFAULT 0`, (err) => {});
     db.run(`ALTER TABLE employees ADD COLUMN opt_out_dinner INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN no_holiday_allowance INTEGER DEFAULT 0`, (err) => {});
 
     // 初始化預設設定
     const defaultSettings = {
@@ -47,7 +48,11 @@ db.serialize(() => {
         'foreign_holiday_allowance': '100',
         'foreign_holiday_ot_8hr_allowance': '125',
         'foreign_holiday_ot_10hr_allowance': '150',
-        'taiwanese_meal_allowance': '1800'
+        'foreign_holiday_ot_12hr_allowance': '150',
+        'foreign_base_allowance': '1000',
+        'taiwanese_meal_allowance': '1800',
+        'ramadan_start': '2026-02-18',
+        'ramadan_end': '2026-03-19'
     };
 
     const stmt = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
