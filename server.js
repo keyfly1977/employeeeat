@@ -614,7 +614,8 @@ app.get('/api/export/excel', async (req, res) => {
                 });
 
                 Object.values(empMap).forEach(e => {
-                    const empNo = (e.emp_no || e.emp_id || '').toString();
+                    if (!e.emp_no) return; // 忽略沒有正式工號的殘留帳號
+                    const empNo = e.emp_no.toString();
                     const dept = e.department || '';
                     if (empNo.startsWith('J')) return;
                     if (dept.includes('董事')) return;
