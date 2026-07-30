@@ -280,16 +280,39 @@
   <!-- Finance Tab -->
   <div id="finance-tab" class="tab-content">
     <div class="app-container">
-      <section class="card finance-card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 40px; box-shadow: var(--glass-shadow); max-width: 500px; margin: 50px auto;">
-        <div style="font-size: 3rem; margin-bottom: 20px;">📊</div>
-        <h2 style="margin-top: 0;">匯出作帳用 Excel</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 30px;">請選擇結算年月，系統將自動為您計算全公司的伙食扣款與津貼報表。</p>
-        
-        <div style="margin-bottom: 30px;">
-          <input type="month" id="export-month" class="form-group" style="padding: 12px 20px; font-size: 1.2rem; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); width: 80%; max-width: 250px;">
+      <section class="panel-left card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 25px; box-shadow: var(--glass-shadow);">
+        <h2 style="margin-top: 0; margin-bottom: 25px;">📊 財務結算與匯出</h2>
+        <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+          <span style="color: var(--text-secondary); font-weight: 500;">結算區間:</span>
+          <input type="date" id="finance-start" class="form-group" style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <span style="color: var(--text-secondary);">~</span>
+          <input type="date" id="finance-end" class="form-group" style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <button onclick="previewFinance()" class="btn-primary" style="padding: 10px 20px;">🔍 查詢預覽</button>
+          <button onclick="exportExcel()" class="btn-primary" style="padding: 10px 20px; background: var(--color-green);">📥 匯出 Excel</button>
         </div>
-        
-        <button onclick="exportExcel()" class="btn-primary" style="width: 80%; max-width: 250px;">📥 點此下載 Excel</button>
+
+        <div class="table-container" style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: center; white-space: nowrap;">
+            <thead id="finance-preview-thead">
+              <tr style="color: var(--text-muted); font-size: 0.95rem; letter-spacing: 0.5px;">
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">工號</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">姓名</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">部門</th>
+                <!-- dynamic columns will go here -->
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應扣伙食費</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應發津貼</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">一般出勤</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(0h)</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(8h)</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(10h+)</th>
+                <th style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">備註</th>
+              </tr>
+            </thead>
+            <tbody id="finance-preview-tbody">
+              <tr><td colspan="10" style="text-align:center; padding: 40px; color: var(--text-muted);">請設定區間並點擊查詢</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   </div>
@@ -845,9 +868,91 @@
       loadMeals(); 
     }
 
+    async function previewFinance() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+
+      try {
+        const res = await fetch(`/api/finance/preview?start=${start}&end=${end}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const thead = document.getElementById('finance-preview-thead');
+        let headerRow1 = `
+          <tr style="color: var(--text-muted); font-size: 0.95rem; letter-spacing: 0.5px;">
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border); border-right: 1px solid var(--glass-border);">工號</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border); border-right: 1px solid var(--glass-border);">姓名</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border); border-right: 1px solid var(--glass-border);">部門</th>`;
+            
+        let headerRow2 = `<tr style="color: var(--text-muted); font-size: 0.9rem; letter-spacing: 0.5px;">`;
+
+        data.dates.forEach(d => {
+            headerRow1 += `<th colspan="2" style="padding: 8px; font-weight: 600; border-bottom: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); text-align: center;">${d.label}</th>`;
+            headerRow2 += `<th style="padding: 8px; font-weight: 500; border-bottom: 2px solid var(--glass-border); text-align: center;">午</th><th style="padding: 8px; font-weight: 500; border-bottom: 2px solid var(--glass-border); border-right: 1px solid var(--glass-border); text-align: center;">晚</th>`;
+        });
+
+        headerRow1 += `
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應扣伙食費</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應發津貼</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">一般出勤</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(0h)</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(8h)</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(10h+)</th>
+            <th rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">備註</th>
+          </tr>`;
+        headerRow2 += `</tr>`;
+        thead.innerHTML = headerRow1 + headerRow2;
+
+        const tbody = document.getElementById('finance-preview-tbody');
+        if (data.rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${10 + data.dates.length * 2}" style="text-align:center; padding: 40px; color: var(--text-muted);">此區間無資料或全無訂餐</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        data.rows.forEach(r => {
+            html += `<tr>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);">${r.id}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);">${r.name}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);">${r.dept}</td>`;
+            
+            data.dates.forEach(d => {
+                const dayData = r.days[d.date] || {};
+                let bg = d.isHoliday ? 'rgba(0,0,0,0.05)' : '';
+                if (dayData.note === '返鄉') bg = '#fff9c4';
+                else if (dayData.note === '齋戒') bg = '#e8f5e9';
+
+                let lText = dayData.l ? 'V' : '';
+                if (dayData.lText) lText = dayData.lText;
+                let dText = dayData.d ? 'V' : '';
+                if (dayData.dText) dText = dayData.dText;
+
+                html += `<td style="padding: 5px; border-bottom: 1px solid var(--glass-border); background: ${bg}; text-align: center; color: #333;">${lText}</td>`;
+                html += `<td style="padding: 5px; border-bottom: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); background: ${bg}; text-align: center; color: #333;">${dText}</td>`;
+            });
+
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.deduction}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.allowance}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.norm}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h0}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h8}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h10}</td>`;
+            html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border);">${r.note}</td>`;
+            html += `</tr>`;
+        });
+        tbody.innerHTML = html;
+
+      } catch (err) {
+        alert('預覽失敗: ' + err.message);
+      }
+    }
+
     function exportExcel() {
-      const month = document.getElementById('export-month').value.replace('-', '/');
-      window.location.href = `/api/export/excel?yyyymm=${month}`;
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+      window.location.href = `/api/export/excel?start=${start}&end=${end}`;
     }
 
     async function backendPrint() {
