@@ -542,30 +542,70 @@ app.get('/api/export/excel', async (req, res) => {
                 const daysInMonth = new Date(yyyy, mm, 0).getDate();
 
                 const baseColumns1 = [
-                    { header: '工號', key: 'id', width: 10 },
-                    { header: '姓名', key: 'name', width: 15 },
-                    { header: '部門', key: 'dept', width: 15 },
-                    { header: '國籍', key: 'nat', width: 10 }
+                    { key: 'id', width: 10 },
+                    { key: 'name', width: 15 },
+                    { key: 'dept', width: 15 }
                 ];
 
                 const monthNum = parseInt(mm, 10);
                 const dailyColumns = [];
                 for (let d = 1; d <= daysInMonth; d++) {
-                    dailyColumns.push({ header: `${monthNum}/${d}午`, key: `d${d}_l`, width: 8 });
-                    dailyColumns.push({ header: `${monthNum}/${d}晚`, key: `d${d}_d`, width: 8 });
+                    dailyColumns.push({ key: `d${d}_l`, width: 8 });
+                    dailyColumns.push({ key: `d${d}_d`, width: 8 });
                 }
 
                 const baseColumns2 = [
-                    { header: '應扣伙食費', key: 'deduction', width: 15 },
-                    { header: '應發津貼', key: 'allowance', width: 15 },
-                    { header: '一般出勤(天)', key: 'norm', width: 15 },
-                    { header: '假日未加班(天)', key: 'h0', width: 15 },
-                    { header: '假日加班8hr(天)', key: 'h8', width: 15 },
-                    { header: '假日加班10hr+(天)', key: 'h10', width: 20 },
-                    { header: '備註', key: 'note', width: 20 }
+                    { key: 'deduction', width: 15 },
+                    { key: 'allowance', width: 15 },
+                    { key: 'norm', width: 15 },
+                    { key: 'h0', width: 15 },
+                    { key: 'h8', width: 15 },
+                    { key: 'h10', width: 20 },
+                    { key: 'note', width: 20 }
                 ];
 
                 sheet.columns = [...baseColumns1, ...dailyColumns, ...baseColumns2];
+
+                const row1 = ['工號', '姓名', '部門'];
+                const row2 = ['工號', '姓名', '部門'];
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    row1.push(`${monthNum}/${d}`);
+                    row1.push(`${monthNum}/${d}`);
+                    row2.push('午');
+                    row2.push('晚');
+                }
+
+                const headers2 = ['應扣伙食費', '應發津貼', '一般出勤(天)', '假日未加班(天)', '假日加班8hr(天)', '假日加班10hr+(天)', '備註'];
+                headers2.forEach(h => {
+                    row1.push(h);
+                    row2.push(h);
+                });
+
+                sheet.insertRow(1, row1);
+                sheet.insertRow(2, row2);
+
+                sheet.mergeCells('A1:A2');
+                sheet.mergeCells('B1:B2');
+                sheet.mergeCells('C1:C2');
+                
+                let colIndex = 4;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const cellStart = sheet.getRow(1).getCell(colIndex).address;
+                    const cellEnd = sheet.getRow(1).getCell(colIndex + 1).address;
+                    sheet.mergeCells(`${cellStart}:${cellEnd}`);
+                    colIndex += 2;
+                }
+
+                for (let i = 0; i < headers2.length; i++) {
+                    const startAddr = sheet.getRow(1).getCell(colIndex).address;
+                    const endAddr = sheet.getRow(2).getCell(colIndex).address;
+                    sheet.mergeCells(`${startAddr}:${endAddr}`);
+                    colIndex++;
+                }
+
+                sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+                sheet.getRow(2).alignment = { vertical: 'middle', horizontal: 'center' };
 
                 const empMealsMap = {};
                 meals.forEach(m => {
@@ -574,6 +614,11 @@ app.get('/api/export/excel', async (req, res) => {
                 });
 
                 Object.values(empMap).forEach(e => {
+                    const empNo = (e.emp_no || e.emp_id || '').toString();
+                    const dept = e.department || '';
+                    if (empNo.startsWith('J')) return;
+                    if (dept.includes('董事')) return;
+
                     const deduction = (e.stats.lunch + e.stats.dinner) * bentoPrice;
 
                     let allowance = 0;
@@ -607,7 +652,6 @@ app.get('/api/export/excel', async (req, res) => {
                         id: e.emp_no || e.emp_id, 
                         name: e.name, 
                         dept: e.department,
-                        nat: e.is_foreign ? '外籍' : '本國',
                         deduction: deduction,
                         allowance: allowance,
                         norm: e.stats.normal_days,
