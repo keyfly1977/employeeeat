@@ -529,7 +529,13 @@ app.get('/api/export/excel', async (req, res) => {
                             if (m.ot_hours >= 10) e.stats.hol_10hr++;
                             else if (m.ot_hours >= 8) e.stats.hol_8hr++;
                             else e.stats.hol_no_ot++;
-                           const workbook = new ExcelJS.Workbook();
+                        }
+                    } else {
+                        e.stats.normal_days++;
+                    }
+                });
+
+                const workbook = new ExcelJS.Workbook();
                 const sheet = workbook.addWorksheet(`餐費結算_${yyyymm.replace('/', '')}`);
                 
                 const [yyyy, mm] = yyyymm.split('/');
