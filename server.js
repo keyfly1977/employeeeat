@@ -560,10 +560,24 @@ app.get('/api/export/excel', async (req, res) => {
                     { header: '備註', key: 'note', width: 20 }
                 ];
 
+                // Sheet 3: Daily Details (每日明細)
+                const detailSheet = workbook.addWorksheet(`每日明細_${yyyymm.replace('/', '')}`);
+                detailSheet.columns = [
+                    { header: '日期', key: 'date', width: 15 },
+                    { header: '工號', key: 'id', width: 10 },
+                    { header: '姓名', key: 'name', width: 15 },
+                    { header: '部門', key: 'dept', width: 15 },
+                    { header: '午餐', key: 'lunch', width: 10 },
+                    { header: '晚餐', key: 'dinner', width: 10 },
+                    { header: '假日', key: 'holiday', width: 10 }
+                ];
+
+
+
                 Object.values(empMap).forEach(e => {
                     const deduction = (e.stats.lunch + e.stats.dinner) * bentoPrice;
                     dedSheet.addRow({
-                        id: e.emp_id, name: e.name, dept: e.department,
+                        id: e.emp_no || e.emp_id, name: e.name, dept: e.department,
                         lunch: e.stats.lunch, dinner: e.stats.dinner, deduction
                     });
 
@@ -595,10 +609,28 @@ app.get('/api/export/excel', async (req, res) => {
                     }
 
                     allowSheet.addRow({
-                        id: e.emp_id, name: e.name, nat: e.is_foreign ? '外籍' : '本國',
+                        id: e.emp_no || e.emp_id, name: e.name, nat: e.is_foreign ? '外籍' : '本國',
                         norm: e.stats.normal_days, h0: e.stats.hol_no_ot, h8: e.stats.hol_8hr, h10: e.stats.hol_10hr,
                         allowance, note
                     });
+                });
+
+                // Populate Daily Details Sheet
+                meals.sort((a, b) => a.date.localeCompare(b.date));
+                meals.forEach(m => {
+                    const e = empMap[m.emp_id];
+                    if (!e) return;
+                    if (m.has_lunch || m.has_dinner) {
+                        detailSheet.addRow({
+                            date: m.date,
+                            id: e.emp_no || e.emp_id,
+                            name: e.name,
+                            dept: e.department,
+                            lunch: m.has_lunch ? 'V' : '',
+                            dinner: m.has_dinner ? 'V' : '',
+                            holiday: m.is_holiday ? '是' : ''
+                        });
+                    }
                 });
 
                 res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
