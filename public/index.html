@@ -369,8 +369,12 @@
 
     const today = new Date();
     document.getElementById('print-date').innerText = today.toLocaleDateString('zh-TW');
-    document.getElementById('export-month').value = today.toISOString().substring(0, 7);
-
+    
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    document.getElementById('finance-start').value = `${yyyy}-${mm}-01`;
+    const lastDay = new Date(yyyy, mm, 0).getDate();
+    document.getElementById('finance-end').value = `${yyyy}-${mm}-${lastDay}`;
     let currentSettings = {};
 
     async function loadSettings() {
