@@ -706,6 +706,18 @@ async function getFinanceData(startStr, endStr) {
     return { dates, rows };
 }
 
+// Finance Preview
+app.get('/api/finance/preview', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+        const data = await getFinanceData(start, end);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 const ExcelJS = require('exceljs');
 app.get('/api/export/excel', async (req, res) => {
