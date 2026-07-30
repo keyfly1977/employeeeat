@@ -521,23 +521,23 @@ async function getFinanceData(startStr, endStr) {
         throw new Error('無法取得 HR 系統授權 Token: ' + e.message);
     }
 
-    const empRes = await fetch(\`\${config.HR_API_BASE}/api/ed/emp\`, {
+    const empRes = await fetch(`${config.HR_API_BASE}/api/ed/emp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${mainToken}\` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
       body: JSON.stringify({ CO_ID: config.CO_ID, LIMIT: 1000 })
     });
-    if (!empRes.ok) throw new Error(\`Fetch employees failed: \${empRes.status}\`);
+    if (!empRes.ok) throw new Error(`Fetch employees failed: ${empRes.status}`);
     const empResult = await empRes.json();
     const employees = empResult.data || [];
 
     const dbEmps = await new Promise((resolve) => {
-        db.all(\`SELECT * FROM employees\`, (err, rows) => resolve(rows || []));
+        db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
     });
     const dbEmpsMap = {};
     dbEmps.forEach(e => dbEmpsMap[e.emp_id] = e);
 
     const settingRows = await new Promise((resolve) => {
-        db.all(\`SELECT * FROM settings\`, (err, rows) => resolve(rows || []));
+        db.all(`SELECT * FROM settings`, (err, rows) => resolve(rows || []));
     });
     const s = {};
     settingRows.forEach(r => s[r.key] = r.value);
@@ -647,7 +647,7 @@ async function getFinanceData(startStr, endStr) {
                     (e.stats.hol_no_ot * frHolidayNoOT) + 
                     (e.stats.hol_8hr * frHoliday8hr) + 
                     (e.stats.hol_10hr * frHoliday10hr);
-                note = \`返鄉中 (底數依比例: \${proratedBase})\`;
+                note = `返鄉中 (底數依比例: ${proratedBase})`;
             } else {
                 allowance = frBaseAllowance + 
                     (e.stats.hol_no_ot * frHolidayNoOT) + 
