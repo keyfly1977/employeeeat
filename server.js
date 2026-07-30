@@ -541,11 +541,21 @@ app.get('/api/export/excel', async (req, res) => {
                 const [yyyy, mm] = yyyymm.split('/');
                 const daysInMonth = new Date(yyyy, mm, 0).getDate();
 
-                const columns = [
+                const baseColumns1 = [
                     { header: '工號', key: 'id', width: 10 },
                     { header: '姓名', key: 'name', width: 15 },
                     { header: '部門', key: 'dept', width: 15 },
-                    { header: '國籍', key: 'nat', width: 10 },
+                    { header: '國籍', key: 'nat', width: 10 }
+                ];
+
+                const monthNum = parseInt(mm, 10);
+                const dailyColumns = [];
+                for (let d = 1; d <= daysInMonth; d++) {
+                    dailyColumns.push({ header: `${monthNum}/${d}午`, key: `d${d}_l`, width: 8 });
+                    dailyColumns.push({ header: `${monthNum}/${d}晚`, key: `d${d}_d`, width: 8 });
+                }
+
+                const baseColumns2 = [
                     { header: '應扣伙食費', key: 'deduction', width: 15 },
                     { header: '應發津貼', key: 'allowance', width: 15 },
                     { header: '一般出勤(天)', key: 'norm', width: 15 },
@@ -555,11 +565,7 @@ app.get('/api/export/excel', async (req, res) => {
                     { header: '備註', key: 'note', width: 20 }
                 ];
 
-                for (let d = 1; d <= daysInMonth; d++) {
-                    columns.push({ header: `${d}號午`, key: `d${d}_l`, width: 8 });
-                    columns.push({ header: `${d}號晚`, key: `d${d}_d`, width: 8 });
-                }
-                sheet.columns = columns;
+                sheet.columns = [...baseColumns1, ...dailyColumns, ...baseColumns2];
 
                 const empMealsMap = {};
                 meals.forEach(m => {
