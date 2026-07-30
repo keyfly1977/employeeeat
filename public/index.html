@@ -186,34 +186,50 @@
 
   <!-- Admin Tab -->
   <div id="admin-tab" class="tab-content">
-    <div class="app-container">
-      <section class="card" style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow); max-width: 600px; margin: 0 auto;">
+    <div class="app-container" style="display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; max-width: 1400px; margin: 0 auto;">
+      <!-- Left side: Settings Form -->
+      <section class="card" style="flex: 1; min-width: 450px; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow);">
         <h2 style="margin-top: 0; margin-bottom: 25px;">⚙️ 餐費設定 (總務專區)</h2>
         
         <form class="settings-form" id="settings-form" style="width: 100%;">
+          <h3 style="margin-top: 5px; margin-bottom: 15px; font-size: 1.1rem; color: var(--color-primary);">🍱 共通設定</h3>
           <div class="form-group">
             <label>便當單價 (元)</label>
             <input type="number" id="set-bento" required>
           </div>
-          <div class="form-group">
-            <label>台灣員工伙食津貼 (月/元)</label>
-            <input type="number" id="set-tw" required>
+
+          <h3 style="margin-top: 25px; margin-bottom: 15px; font-size: 1.1rem; color: var(--color-primary);">🇹🇼 本國員工設定</h3>
+          <div style="display: flex; gap: 15px;">
+            <div class="form-group" style="flex: 1;">
+              <label>本國發餐費底數 (月/元)</label>
+              <input type="number" id="set-tw-base" required>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>台灣員工伙食津貼 (月/元)</label>
+              <input type="number" id="set-tw" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label>外籍假日未加班津貼 (日/元)</label>
-            <input type="number" id="set-fr-0" required>
+
+          <h3 style="margin-top: 25px; margin-bottom: 15px; font-size: 1.1rem; color: var(--color-primary);">🌏 外籍員工設定</h3>
+          <div style="display: flex; gap: 15px;">
+            <div class="form-group" style="flex: 1;">
+              <label>外籍發餐費底數 (月/元)</label>
+              <input type="number" id="set-fr-base" required>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>假日未加班津貼 (日/元)</label>
+              <input type="number" id="set-fr-0" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label>外籍假日加班 8hr 津貼 (日/元)</label>
-            <input type="number" id="set-fr-8" required>
-          </div>
-          <div class="form-group">
-            <label>外籍假日加班 10hr+ 津貼 (日/元)</label>
-            <input type="number" id="set-fr-10" required>
-          </div>
-          <div class="form-group">
-            <label>外籍發餐費底數 (月/元)</label>
-            <input type="number" id="set-fr-base" required>
+          <div style="display: flex; gap: 15px;">
+            <div class="form-group" style="flex: 1;">
+              <label>假日加班 8hr 津貼 (日/元)</label>
+              <input type="number" id="set-fr-8" required>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>假日加班 10hr+ 津貼 (日/元)</label>
+              <input type="number" id="set-fr-10" required>
+            </div>
           </div>
           
           <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.1rem;">📅 齋戒月自動化設定</h3>
@@ -232,6 +248,31 @@
             <button type="submit" class="btn-primary">儲存設定</button>
           </div>
         </form>
+      </section>
+
+      <!-- Right side: Employee Management UI -->
+      <section class="card" style="flex: 2; min-width: 600px; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow);">
+        <h2 style="margin-top: 0; margin-bottom: 20px;">👥 外籍員工津貼例外設定</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+          若外籍員工為「無住宿」或「短暫返鄉」，請在此勾選，該期間結算將「不發放」任何假日津貼與發餐費底數。
+        </p>
+        <div class="table-container" style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;">
+            <thead>
+              <tr style="color: var(--text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">工號</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">姓名</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">無住宿 (不發津貼)</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉中</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉區間 (開始 ~ 結束)</th>
+              </tr>
+            </thead>
+            <tbody id="employee-hr-tbody" style="font-size: 1.05rem;">
+              <tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   </div>
@@ -297,7 +338,10 @@
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-tab').classList.add('active');
       event.target.classList.add('active');
-      if (tabId === 'admin') loadSettings();
+      if (tabId === 'admin') {
+        loadSettings();
+        loadHREmployees();
+      }
     }
 
     const today = new Date();
@@ -316,7 +360,8 @@
       document.getElementById('set-fr-0').value = data.foreign_holiday_allowance || 100;
       document.getElementById('set-fr-8').value = data.foreign_holiday_ot_8hr_allowance || 125;
       document.getElementById('set-fr-10').value = data.foreign_holiday_ot_10hr_allowance || 150;
-      document.getElementById('set-fr-base').value = data.foreign_base_allowance || 1000;
+      document.getElementById('set-tw-base').value = data.taiwanese_base_allowance || 300;
+      document.getElementById('set-fr-base').value = data.foreign_base_allowance || 300;
       document.getElementById('set-ramadan-start').value = data.ramadan_start || '2026-02-18';
       document.getElementById('set-ramadan-end').value = data.ramadan_end || '2026-03-19';
     }
@@ -393,6 +438,89 @@
         }
       }
 
+    async function loadHREmployees() {
+      try {
+        const res = await fetch('/api/employees');
+        const emps = await res.json();
+        const foreignEmps = emps.filter(e => e.is_foreign === 1);
+        const hrTbody = document.getElementById('employee-hr-tbody');
+        if (!hrTbody) return;
+        hrTbody.innerHTML = '';
+        if (foreignEmps.length === 0) {
+          hrTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-muted);">無外籍員工資料</td></tr>';
+          return;
+        }
+        foreignEmps.forEach(emp => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.emp_no || emp.emp_id}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 600;">${emp.name}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.department || '未分配'}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); text-align: center;">
+              <input type="checkbox" class="hr-noacc-checkbox" data-empid="${emp.emp_id}" ${emp.no_accommodation === 1 ? 'checked' : ''} style="transform: scale(1.5); cursor: pointer; accent-color: var(--color-primary);">
+            </td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); text-align: center;">
+              <input type="checkbox" class="hr-home-checkbox" data-empid="${emp.emp_id}" ${emp.is_returning_home === 1 ? 'checked' : ''} style="transform: scale(1.5); cursor: pointer; accent-color: var(--color-primary);">
+            </td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">
+              <div style="display: flex; gap: 5px; align-items: center; justify-content: flex-start; ${emp.is_returning_home === 1 ? '' : 'opacity: 0.3; pointer-events: none;'}" id="home-dates-${emp.emp_id}">
+                <input type="date" class="hr-date-input" data-empid="${emp.emp_id}" data-type="start" value="${emp.return_home_start || ''}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                <span>~</span>
+                <input type="date" class="hr-date-input" data-empid="${emp.emp_id}" data-type="end" value="${emp.return_home_end || ''}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+              </div>
+            </td>
+          `;
+          hrTbody.appendChild(tr);
+        });
+
+        const updateAllowanceStatus = async (empId) => {
+            const noAccCb = document.querySelector(`.hr-noacc-checkbox[data-empid="${empId}"]`);
+            const homeCb = document.querySelector(`.hr-home-checkbox[data-empid="${empId}"]`);
+            const startInput = document.querySelector(`.hr-date-input[data-empid="${empId}"][data-type="start"]`);
+            const endInput = document.querySelector(`.hr-date-input[data-empid="${empId}"][data-type="end"]`);
+            
+            const noAcc = noAccCb ? (noAccCb.checked ? 1 : 0) : 0;
+            const isHome = homeCb ? (homeCb.checked ? 1 : 0) : 0;
+            const startStr = startInput ? startInput.value : '';
+            const endStr = endInput ? endInput.value : '';
+
+            const dateContainer = document.getElementById(`home-dates-${empId}`);
+            if (dateContainer) {
+                if (isHome) {
+                    dateContainer.style.opacity = '1';
+                    dateContainer.style.pointerEvents = 'auto';
+                } else {
+                    dateContainer.style.opacity = '0.3';
+                    dateContainer.style.pointerEvents = 'none';
+                }
+            }
+
+            try {
+              const resp = await fetch(`/api/employees/${empId}/allowance-status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    no_accommodation: noAcc,
+                    is_returning_home: isHome,
+                    return_home_start: startStr,
+                    return_home_end: endStr
+                })
+              });
+              if (!resp.ok) throw new Error('Update failed');
+            } catch (err) {
+              console.error("Failed to update status:", err);
+              alert("更新失敗，請確認網路連線！");
+            }
+        };
+
+        document.querySelectorAll('.hr-noacc-checkbox').forEach(cb => cb.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
+        document.querySelectorAll('.hr-home-checkbox').forEach(cb => cb.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
+        document.querySelectorAll('.hr-date-input').forEach(inp => inp.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
+      } catch (err) {
+        console.error("Failed to load HR employees:", err);
+      }
+    }
+
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       currentSettings['bento_price'] = document.getElementById('set-bento').value;
@@ -400,6 +528,7 @@
       currentSettings['foreign_holiday_allowance'] = document.getElementById('set-fr-0').value;
       currentSettings['foreign_holiday_ot_8hr_allowance'] = document.getElementById('set-fr-8').value;
       currentSettings['foreign_holiday_ot_10hr_allowance'] = document.getElementById('set-fr-10').value;
+      currentSettings['taiwanese_base_allowance'] = document.getElementById('set-tw-base').value;
       currentSettings['foreign_base_allowance'] = document.getElementById('set-fr-base').value;
       currentSettings['ramadan_start'] = document.getElementById('set-ramadan-start').value;
       currentSettings['ramadan_end'] = document.getElementById('set-ramadan-end').value;

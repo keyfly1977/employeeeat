@@ -309,12 +309,12 @@ app.get('/api/meals/today', async (req, res) => {
 
     // Sync employees to local DB
     db.serialize(() => {
-        const stmt = db.prepare(`INSERT INTO employees (emp_id, name, department, is_foreign) VALUES (?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign`);
+        const stmt = db.prepare(`INSERT INTO employees (emp_id, emp_no, name, department, is_foreign) VALUES (?, ?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET emp_no=excluded.emp_no, name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign`);
         employees.forEach(emp => {
             if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return; // 忽略 J 開頭工號
             const isForeign = emp.NATIONALITY !== 'TW' ? 1 : 0;
             const dept = emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配';
-            stmt.run(emp.EMP_ID, emp.EMP_NAME, dept, isForeign);
+            stmt.run(emp.EMP_ID, emp.EMP_NO, emp.EMP_NAME, dept, isForeign);
         });
         stmt.finalize();
     });
@@ -397,15 +397,36 @@ app.post('/api/employees/diet', (req, res) => {
 });
 
 // Update employee meal opt-out defaults
+// Update employee manual meal opt-out defaults
 app.post('/api/employees/optout', (req, res) => {
     const { empId, optOutLunch, optOutDinner, noHolidayAllowance } = req.body;
     db.run(`UPDATE employees SET opt_out_lunch = ?, opt_out_dinner = ?, no_holiday_allowance = ? WHERE emp_id = ?`, 
         [optOutLunch ? 1 : 0, optOutDinner ? 1 : 0, noHolidayAllowance ? 1 : 0, empId], 
         function(err) {
-            if (err) {
-                return res.status(500).json({ success: false, error: err.message });
-            }
-            cachedData = null; // Invalidate cache
+            if (err) return res.status(500).json({ success: false, error: err.message });
+            cachedData = null;
+            res.json({ success: true });
+        }
+    );
+});
+
+// Get all employees
+app.get('/api/employees', (req, res) => {
+    db.all(`SELECT * FROM employees`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// Update allowance status (no accommodation / returning home)
+app.put('/api/employees/:emp_id/allowance-status', (req, res) => {
+    const { emp_id } = req.params;
+    const { no_accommodation, is_returning_home, return_home_start, return_home_end } = req.body;
+    db.run(`UPDATE employees SET no_accommodation = ?, is_returning_home = ?, return_home_start = ?, return_home_end = ? WHERE emp_id = ?`, 
+        [no_accommodation ? 1 : 0, is_returning_home ? 1 : 0, return_home_start || null, return_home_end || null, emp_id], 
+        function(err) {
+            if (err) return res.status(500).json({ success: false, error: err.message });
+            cachedData = null;
             res.json({ success: true });
         }
     );
@@ -461,52 +482,128 @@ app.post('/api/settings', (req, res) => {
 // Export Excel
 const ExcelJS = require('exceljs');
 app.get('/api/export/excel', async (req, res) => {
-    const { yyyymm } = req.query; // format like "2026/05"
+    const { yyyymm } = req.query;
     if (!yyyymm) return res.status(400).json({ error: "Missing yyyymm param" });
 
-    // In a real app we'd fetch all meal_records for the month.
-    // We'll generate a simplified mock Excel to demonstrate feasibility.
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(`伙食費結算_${yyyymm.replace('/', '')}`);
-    
-    sheet.columns = [
-        { header: '工號', key: 'emp_id', width: 15 },
-        { header: '姓名', key: 'name', width: 20 },
-        { header: '部門', key: 'dept', width: 20 },
-        { header: '午餐次數', key: 'lunch_count', width: 15 },
-        { header: '晚餐次數', key: 'dinner_count', width: 15 },
-        { header: '應扣伙食費', key: 'deduction', width: 20 },
-    ];
-
-    db.all(`SELECT emp_id, sum(has_lunch) as lunch_count, sum(has_dinner) as dinner_count 
-            FROM meal_records WHERE date LIKE ? GROUP BY emp_id`, 
-            [`${yyyymm}%`], (err, rows) => {
+    db.all(`SELECT * FROM settings`, (err, settingRows) => {
         if (err) return res.status(500).json({ error: err.message });
+        const s = {};
+        settingRows.forEach(r => s[r.key] = r.value);
+
+        const bentoPrice = parseInt(s['bento_price'] || 60);
+        const twAllowance = parseInt(s['taiwanese_meal_allowance'] || 1800);
+        const frHolidayNoOT = parseInt(s['foreign_holiday_allowance'] || 100);
+        const frHoliday8hr = parseInt(s['foreign_holiday_ot_8hr_allowance'] || 125);
+        const frHoliday10hr = parseInt(s['foreign_holiday_ot_10hr_allowance'] || 150);
+        const frBaseAllowance = parseInt(s['foreign_base_allowance'] || 300);
+        const twBaseAllowance = parseInt(s['taiwanese_base_allowance'] || 300);
 
         db.all(`SELECT * FROM employees`, (err, emps) => {
             const empMap = {};
-            emps.forEach(e => empMap[e.emp_id] = e);
+            emps.forEach(e => {
+                empMap[e.emp_id] = e;
+                e.stats = { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0 };
+            });
 
-            db.get(`SELECT value FROM settings WHERE key='bento_price'`, (err, setting) => {
-                const bentoPrice = setting ? parseInt(setting.value) : 60;
+            db.all(`SELECT * FROM meal_records WHERE date LIKE ?`, [`${yyyymm}%`], (err, meals) => {
+                meals.forEach(m => {
+                    const e = empMap[m.emp_id];
+                    if (!e) return;
+                    e.stats.lunch += m.has_lunch || 0;
+                    e.stats.dinner += m.has_dinner || 0;
 
-                rows.forEach(r => {
-                    const emp = empMap[r.emp_id] || { name: 'Unknown', department: 'Unknown' };
-                    sheet.addRow({
-                        emp_id: r.emp_id,
-                        name: emp.name,
-                        dept: emp.department,
-                        lunch_count: r.lunch_count,
-                        dinner_count: r.dinner_count,
-                        deduction: (r.lunch_count + r.dinner_count) * bentoPrice
+                    let inReturnHomePeriod = false;
+                    if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+                        const mDate = new Date(m.date);
+                        const sDate = new Date(e.return_home_start);
+                        const eDate = new Date(e.return_home_end);
+                        if (mDate >= sDate && mDate <= eDate) {
+                            inReturnHomePeriod = true;
+                        }
+                    }
+
+                    if (m.is_holiday) {
+                        if (!inReturnHomePeriod) {
+                            if (m.ot_hours >= 10) e.stats.hol_10hr++;
+                            else if (m.ot_hours >= 8) e.stats.hol_8hr++;
+                            else e.stats.hol_no_ot++;
+                        }
+                    } else {
+                        e.stats.normal_days++;
+                    }
+                });
+
+                const workbook = new ExcelJS.Workbook();
+                
+                // Sheet 1: Deduction (總務)
+                const dedSheet = workbook.addWorksheet(`總務扣款_${yyyymm.replace('/', '')}`);
+                dedSheet.columns = [
+                    { header: '工號', key: 'id', width: 10 },
+                    { header: '姓名', key: 'name', width: 15 },
+                    { header: '部門', key: 'dept', width: 15 },
+                    { header: '午餐次數', key: 'lunch', width: 15 },
+                    { header: '晚餐次數', key: 'dinner', width: 15 },
+                    { header: '應扣伙食費', key: 'deduction', width: 15 }
+                ];
+
+                // Sheet 2: Allowance (財務)
+                const allowSheet = workbook.addWorksheet(`財務津貼_${yyyymm.replace('/', '')}`);
+                allowSheet.columns = [
+                    { header: '工號', key: 'id', width: 10 },
+                    { header: '姓名', key: 'name', width: 15 },
+                    { header: '國籍', key: 'nat', width: 10 },
+                    { header: '一般出勤(天)', key: 'norm', width: 15 },
+                    { header: '假日未加班(天)', key: 'h0', width: 15 },
+                    { header: '假日加班8hr(天)', key: 'h8', width: 15 },
+                    { header: '假日加班10hr+(天)', key: 'h10', width: 20 },
+                    { header: '應發津貼', key: 'allowance', width: 15 },
+                    { header: '備註', key: 'note', width: 20 }
+                ];
+
+                Object.values(empMap).forEach(e => {
+                    const deduction = (e.stats.lunch + e.stats.dinner) * bentoPrice;
+                    dedSheet.addRow({
+                        id: e.emp_id, name: e.name, dept: e.department,
+                        lunch: e.stats.lunch, dinner: e.stats.dinner, deduction
+                    });
+
+                    let allowance = 0;
+                    let note = '';
+                    if (e.is_foreign) {
+                        if (e.no_accommodation) {
+                            allowance = 0;
+                            note = '無住宿 (不發津貼)';
+                        } else if (e.is_returning_home) {
+                            const proratedBase = Math.round((frBaseAllowance / 30) * e.stats.normal_days);
+                            allowance = proratedBase + 
+                                (e.stats.hol_no_ot * frHolidayNoOT) + 
+                                (e.stats.hol_8hr * frHoliday8hr) + 
+                                (e.stats.hol_10hr * frHoliday10hr);
+                            note = `返鄉中 (底數依比例: ${proratedBase})`;
+                        } else {
+                            allowance = frBaseAllowance + 
+                                (e.stats.hol_no_ot * frHolidayNoOT) + 
+                                (e.stats.hol_8hr * frHoliday8hr) + 
+                                (e.stats.hol_10hr * frHoliday10hr);
+                        }
+                    } else {
+                        // Taiwanese
+                        allowance = Math.round((twAllowance / 30) * e.stats.normal_days) + 
+                                    twBaseAllowance + 
+                                    (e.stats.hol_8hr * frHoliday8hr) + 
+                                    (e.stats.hol_10hr * frHoliday10hr);
+                    }
+
+                    allowSheet.addRow({
+                        id: e.emp_id, name: e.name, nat: e.is_foreign ? '外籍' : '本國',
+                        norm: e.stats.normal_days, h0: e.stats.hol_no_ot, h8: e.stats.hol_8hr, h10: e.stats.hol_10hr,
+                        allowance, note
                     });
                 });
 
                 res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
                 res.setHeader('Content-Disposition', `attachment; filename=meal_report_${yyyymm.replace('/', '')}.xlsx`);
-                workbook.xlsx.write(res).then(() => {
-                    res.end();
-                });
+                workbook.xlsx.write(res).then(() => res.end());
             });
         });
     });

@@ -9,10 +9,21 @@ db.serialize(() => {
     // 員工資料表
     db.run(`CREATE TABLE IF NOT EXISTS employees (
         emp_id TEXT PRIMARY KEY,
+        emp_no TEXT,
         name TEXT NOT NULL,
         department TEXT,
         is_foreign INTEGER DEFAULT 0
     )`);
+
+    // Migration for emp_no
+    db.all("PRAGMA table_info(employees)", (err, columns) => {
+        if (!err && columns) {
+            const hasEmpNo = columns.some(c => c.name === 'emp_no');
+            if (!hasEmpNo) {
+                db.run("ALTER TABLE employees ADD COLUMN emp_no TEXT");
+            }
+        }
+    });
 
     // 每日訂餐紀錄
     db.run(`CREATE TABLE IF NOT EXISTS meal_records (
@@ -34,13 +45,16 @@ db.serialize(() => {
         value TEXT NOT NULL
     )`);
 
-    // Add diet_type column if it doesn't exist
     db.run(`ALTER TABLE employees ADD COLUMN diet_type TEXT`, (err) => {
         // Ignore error if column already exists
     });
     db.run(`ALTER TABLE employees ADD COLUMN opt_out_lunch INTEGER DEFAULT 0`, (err) => {});
     db.run(`ALTER TABLE employees ADD COLUMN opt_out_dinner INTEGER DEFAULT 0`, (err) => {});
     db.run(`ALTER TABLE employees ADD COLUMN no_holiday_allowance INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN no_accommodation INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN is_returning_home INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN return_home_start TEXT`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN return_home_end TEXT`, (err) => {});
 
     // 初始化預設設定
     const defaultSettings = {
