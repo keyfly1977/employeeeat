@@ -312,8 +312,10 @@ app.get('/api/meals/today', async (req, res) => {
         const stmt = db.prepare(`INSERT INTO employees (emp_id, emp_no, name, department, is_foreign) VALUES (?, ?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET emp_no=excluded.emp_no, name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign`);
         employees.forEach(emp => {
             if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return; // 忽略 J 開頭工號
-            const isForeign = emp.NATIONALITY !== 'TW' ? 1 : 0;
             const dept = emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配';
+            if (dept.includes('董事')) return; // 忽略董事會
+            if (emp.LEAVE_DATE) return; // 忽略離職人員
+            const isForeign = emp.NATIONALITY !== 'TW' ? 1 : 0;
             stmt.run(emp.EMP_ID, emp.EMP_NO, emp.EMP_NAME, dept, isForeign);
         });
         stmt.finalize();
@@ -527,59 +529,40 @@ app.get('/api/export/excel', async (req, res) => {
                             if (m.ot_hours >= 10) e.stats.hol_10hr++;
                             else if (m.ot_hours >= 8) e.stats.hol_8hr++;
                             else e.stats.hol_no_ot++;
-                        }
-                    } else {
-                        e.stats.normal_days++;
-                    }
-                });
-
-                const workbook = new ExcelJS.Workbook();
+                           const workbook = new ExcelJS.Workbook();
+                const sheet = workbook.addWorksheet(`餐費結算_${yyyymm.replace('/', '')}`);
                 
-                // Sheet 1: Deduction (總務)
-                const dedSheet = workbook.addWorksheet(`總務扣款_${yyyymm.replace('/', '')}`);
-                dedSheet.columns = [
+                const [yyyy, mm] = yyyymm.split('/');
+                const daysInMonth = new Date(yyyy, mm, 0).getDate();
+
+                const columns = [
                     { header: '工號', key: 'id', width: 10 },
                     { header: '姓名', key: 'name', width: 15 },
                     { header: '部門', key: 'dept', width: 15 },
-                    { header: '午餐次數', key: 'lunch', width: 15 },
-                    { header: '晚餐次數', key: 'dinner', width: 15 },
-                    { header: '應扣伙食費', key: 'deduction', width: 15 }
-                ];
-
-                // Sheet 2: Allowance (財務)
-                const allowSheet = workbook.addWorksheet(`財務津貼_${yyyymm.replace('/', '')}`);
-                allowSheet.columns = [
-                    { header: '工號', key: 'id', width: 10 },
-                    { header: '姓名', key: 'name', width: 15 },
                     { header: '國籍', key: 'nat', width: 10 },
+                    { header: '應扣伙食費', key: 'deduction', width: 15 },
+                    { header: '應發津貼', key: 'allowance', width: 15 },
                     { header: '一般出勤(天)', key: 'norm', width: 15 },
                     { header: '假日未加班(天)', key: 'h0', width: 15 },
                     { header: '假日加班8hr(天)', key: 'h8', width: 15 },
                     { header: '假日加班10hr+(天)', key: 'h10', width: 20 },
-                    { header: '應發津貼', key: 'allowance', width: 15 },
                     { header: '備註', key: 'note', width: 20 }
                 ];
 
-                // Sheet 3: Daily Details (每日明細)
-                const detailSheet = workbook.addWorksheet(`每日明細_${yyyymm.replace('/', '')}`);
-                detailSheet.columns = [
-                    { header: '日期', key: 'date', width: 15 },
-                    { header: '工號', key: 'id', width: 10 },
-                    { header: '姓名', key: 'name', width: 15 },
-                    { header: '部門', key: 'dept', width: 15 },
-                    { header: '午餐', key: 'lunch', width: 10 },
-                    { header: '晚餐', key: 'dinner', width: 10 },
-                    { header: '假日', key: 'holiday', width: 10 }
-                ];
+                for (let d = 1; d <= daysInMonth; d++) {
+                    columns.push({ header: `${d}號午`, key: `d${d}_l`, width: 8 });
+                    columns.push({ header: `${d}號晚`, key: `d${d}_d`, width: 8 });
+                }
+                sheet.columns = columns;
 
-
+                const empMealsMap = {};
+                meals.forEach(m => {
+                    if (!empMealsMap[m.emp_id]) empMealsMap[m.emp_id] = [];
+                    empMealsMap[m.emp_id].push(m);
+                });
 
                 Object.values(empMap).forEach(e => {
                     const deduction = (e.stats.lunch + e.stats.dinner) * bentoPrice;
-                    dedSheet.addRow({
-                        id: e.emp_no || e.emp_id, name: e.name, dept: e.department,
-                        lunch: e.stats.lunch, dinner: e.stats.dinner, deduction
-                    });
 
                     let allowance = 0;
                     let note = '';
@@ -608,29 +591,28 @@ app.get('/api/export/excel', async (req, res) => {
                                     (e.stats.hol_10hr * frHoliday10hr);
                     }
 
-                    allowSheet.addRow({
-                        id: e.emp_no || e.emp_id, name: e.name, nat: e.is_foreign ? '外籍' : '本國',
-                        norm: e.stats.normal_days, h0: e.stats.hol_no_ot, h8: e.stats.hol_8hr, h10: e.stats.hol_10hr,
-                        allowance, note
-                    });
-                });
+                    const rowData = {
+                        id: e.emp_no || e.emp_id, 
+                        name: e.name, 
+                        dept: e.department,
+                        nat: e.is_foreign ? '外籍' : '本國',
+                        deduction: deduction,
+                        allowance: allowance,
+                        norm: e.stats.normal_days,
+                        h0: e.stats.hol_no_ot,
+                        h8: e.stats.hol_8hr,
+                        h10: e.stats.hol_10hr,
+                        note: note
+                    };
 
-                // Populate Daily Details Sheet
-                meals.sort((a, b) => a.date.localeCompare(b.date));
-                meals.forEach(m => {
-                    const e = empMap[m.emp_id];
-                    if (!e) return;
-                    if (m.has_lunch || m.has_dinner) {
-                        detailSheet.addRow({
-                            date: m.date,
-                            id: e.emp_no || e.emp_id,
-                            name: e.name,
-                            dept: e.department,
-                            lunch: m.has_lunch ? 'V' : '',
-                            dinner: m.has_dinner ? 'V' : '',
-                            holiday: m.is_holiday ? '是' : ''
-                        });
-                    }
+                    const empMeals = empMealsMap[e.emp_id] || [];
+                    empMeals.forEach(m => {
+                        const d = parseInt(m.date.split('/')[2]);
+                        if (m.has_lunch) rowData[`d${d}_l`] = 'V';
+                        if (m.has_dinner) rowData[`d${d}_d`] = 'V';
+                    });
+
+                    sheet.addRow(rowData);
                 });
 
                 res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
