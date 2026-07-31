@@ -287,7 +287,22 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         }
 
         let hasLunch = status === 'present';
-        let hasDinner = !!ot;
+        
+        let otHoursVal = ot ? parseFloat(ot.OT_HOURS || ot.HOURS || ot.TOT_HOURS || 0) : 0;
+        const isRestOvertime = (match && match.IS_REST_OVERTIME === 1);
+        
+        let hasDinner = false;
+        
+        if (isRestOvertime) {
+            // 假日加班：公司不供餐（自動關閉）
+            hasLunch = false;
+            hasDinner = false;
+        } else {
+            // 平日：加班滿 2 小時才自動訂晚餐
+            if (otHoursVal >= 2) {
+                hasDinner = true;
+            }
+        }
 
         if (optOutLunch) hasLunch = false;
         if (optOutDinner) hasDinner = false;
@@ -319,7 +334,8 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             hasLunch,
             hasDinner,
             hasOt: !!ot,
-            otHours: ot ? parseFloat(ot.OT_HOURS || ot.HOURS || ot.TOT_HOURS || 0) : 0
+            otHours: otHoursVal,
+            isRestOvertime: isRestOvertime
         };
     });
 
@@ -553,10 +569,13 @@ app.post('/api/meals/save_all', (req, res) => {
             has_lunch=excluded.has_lunch, has_dinner=excluded.has_dinner, is_holiday=excluded.is_holiday, ot_hours=excluded.ot_hours, status=excluded.status, updated_at=CURRENT_TIMESTAMP
         `);
         
-        const isHoliday = getDatesInRange(todayStr, todayStr)[0]?.isHoliday ? 1 : 0;
+        const globalFallbackIsHoliday = getDatesInRange(todayStr, todayStr)[0]?.isHoliday ? 1 : 0;
 
         for (const m of meals) {
-            stmt.run([todayStr, m.empId, m.hasLunch ? 1 : 0, m.hasDinner ? 1 : 0, isHoliday, m.otHours || 0, m.status || 'present']);
+            // Prefer the employee-specific isRestOvertime flag if available (from HR API),
+            // Otherwise fallback to whether it's a weekend.
+            const isEmpHoliday = m.isRestOvertime ? 1 : globalFallbackIsHoliday;
+            stmt.run([todayStr, m.empId, m.hasLunch ? 1 : 0, m.hasDinner ? 1 : 0, isEmpHoliday, m.otHours || 0, m.status || 'present']);
         }
         
         stmt.finalize((err) => {
@@ -642,11 +661,13 @@ async function getFinanceData(startStr, endStr) {
     const ramadanEndStr = s['ramadan_end'];
     const bentoPrice = parseInt(s['bento_price'] || 60);
     const twAllowance = parseInt(s['taiwanese_meal_allowance'] || 1800);
-    const frHolidayNoOT = parseInt(s['foreign_holiday_allowance'] || 100);
-    const frHoliday8hr = parseInt(s['foreign_holiday_ot_8hr_allowance'] || 125);
-    const frHoliday10hr = parseInt(s['foreign_holiday_ot_10hr_allowance'] || 150);
+    const frHolidayNoOT = parseInt(s['foreign_holiday_no_ot_allowance'] || 100);
     const frBaseAllowance = parseInt(s['foreign_base_allowance'] || 300);
     const twBaseAllowance = parseInt(s['taiwanese_base_allowance'] || 300);
+    const ot4Allowance = parseInt(s['universal_weekday_ot_4hr_allowance'] || 75);
+    const ot8Allowance = parseInt(s['universal_holiday_ot_8hr_allowance'] || 75);
+    const ot10Allowance = parseInt(s['universal_holiday_ot_10hr_allowance'] || 150);
+    const ot12Allowance = parseInt(s['universal_holiday_ot_12hr_allowance'] || 225);
 
     const dates = getDatesInRange(startStr, endStr);
     if (dates.length === 0) return { dates: [], rows: [] };
@@ -680,9 +701,9 @@ async function getFinanceData(startStr, endStr) {
                 return_home_start: dbEmp.return_home_start,
                 return_home_end: dbEmp.return_home_end,
                 no_accommodation: dbEmp.no_accommodation === 1,
-                no_holiday_allowance: false, // In local DB only, this comes from employees table, but we don't use it directly here anyway
+                no_holiday_allowance: false,
                 diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
-                stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0 },
+                stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0, hol_12hr: 0, weekday_ot_4hr: 0, free_dinners: 0 },
                 days: {}
             };
         }
@@ -709,15 +730,21 @@ async function getFinanceData(startStr, endStr) {
         const isHoliday = m.is_holiday === 1;
         const otHours = m.ot_hours || 0;
 
+        if (hasDinner && !isHoliday && otHours >= 2) {
+            e.stats.free_dinners++;
+        }
+
         if (isHoliday) {
             if (!inReturnHomePeriod) {
-                if (otHours >= 10) e.stats.hol_10hr++;
+                if (otHours >= 12) e.stats.hol_12hr++;
+                else if (otHours >= 10) e.stats.hol_10hr++;
                 else if (otHours >= 8) e.stats.hol_8hr++;
                 else e.stats.hol_no_ot++;
             }
         } else {
             if (!inReturnHomePeriod) {
                 e.stats.normal_days++;
+                if (otHours >= 4) e.stats.weekday_ot_4hr++;
             }
         }
         
@@ -755,32 +782,32 @@ async function getFinanceData(startStr, endStr) {
     const rows = [];
     Object.values(empMap).forEach(e => {
         const totalMeals = e.stats.lunch + e.stats.dinner;
-        const deduction = totalMeals * bentoPrice;
+        const chargeableMeals = Math.max(0, totalMeals - e.stats.free_dinners);
+        const deduction = chargeableMeals * bentoPrice;
 
         let allowance = 0;
         let note = '';
+        
+        const otSubsidies = (e.stats.weekday_ot_4hr * ot4Allowance) +
+                            (e.stats.hol_8hr * ot8Allowance) +
+                            (e.stats.hol_10hr * ot10Allowance) +
+                            (e.stats.hol_12hr * ot12Allowance);
+
         if (e.is_foreign) {
+            const frAllowance = parseInt(s['foreign_allowance'] || 0);
             if (e.no_accommodation) {
-                allowance = 0;
-                note = '無住宿 (不發津貼)';
+                allowance = otSubsidies + frAllowance;
+                note = '無住宿 (不發底數)';
             } else if (e.is_returning_home) {
                 const proratedBase = Math.round((frBaseAllowance / 30) * e.stats.normal_days);
-                allowance = proratedBase + 
-                    (e.stats.hol_no_ot * frHolidayNoOT) + 
-                    (e.stats.hol_8hr * frHoliday8hr) + 
-                    (e.stats.hol_10hr * frHoliday10hr);
+                allowance = proratedBase + (e.stats.hol_no_ot * frHolidayNoOT) + otSubsidies + frAllowance;
                 note = `返鄉中 (底數依比例: ${proratedBase})`;
             } else {
-                allowance = frBaseAllowance + 
-                    (e.stats.hol_no_ot * frHolidayNoOT) + 
-                    (e.stats.hol_8hr * frHoliday8hr) + 
-                    (e.stats.hol_10hr * frHoliday10hr);
+                allowance = frBaseAllowance + (e.stats.hol_no_ot * frHolidayNoOT) + otSubsidies + frAllowance;
             }
         } else {
             allowance = Math.round((twAllowance / 30) * e.stats.normal_days) + 
-                        twBaseAllowance + 
-                        (e.stats.hol_8hr * frHoliday8hr) + 
-                        (e.stats.hol_10hr * frHoliday10hr);
+                        twBaseAllowance + otSubsidies;
         }
 
         if (totalMeals === 0 && allowance === 0 && e.diet_type !== '齋戒' && !e.is_returning_home) return;
@@ -818,19 +845,22 @@ async function getFinanceData(startStr, endStr) {
             }
         });
 
-        rows.push({
-            id: e.emp_no,
-            name: e.name,
-            dept: e.department,
-            days: e.days,
-            deduction,
-            allowance,
-            norm: e.stats.normal_days,
-            h0: e.stats.hol_no_ot,
-            h8: e.stats.hol_8hr,
+        const rowData = {
+            id: e.emp_no, 
+            name: e.name, 
+            dept: e.department, 
+            deduction, 
+            allowance, 
+            norm: e.stats.normal_days, 
+            w4: e.stats.weekday_ot_4hr,
+            h0: e.stats.hol_no_ot, 
+            h8: e.stats.hol_8hr, 
             h10: e.stats.hol_10hr,
-            note: note
-        });
+            h12: e.stats.hol_12hr,
+            note,
+            days: e.days
+        };
+        rows.push(rowData);
     });
 
     return { dates, rows };
@@ -878,9 +908,11 @@ app.get('/api/export/excel', async (req, res) => {
             { key: 'deduction', width: 15 },
             { key: 'allowance', width: 15 },
             { key: 'norm', width: 15 },
+            { key: 'w4', width: 15 },
             { key: 'h0', width: 15 },
             { key: 'h8', width: 15 },
-            { key: 'h10', width: 20 },
+            { key: 'h10', width: 15 },
+            { key: 'h12', width: 15 },
             { key: 'note', width: 25 }
         ];
 
@@ -896,7 +928,7 @@ app.get('/api/export/excel', async (req, res) => {
             row2.push('晚');
         });
 
-        const headers2 = ['應扣伙食費', '應發津貼', '一般出勤(天)', '假日未加班(天)', '假日加班8hr(天)', '假日加班10hr+(天)', '備註'];
+        const headers2 = ['應扣伙食費', '應發津貼', '一般出勤(天)', '平日加班4hr+(天)', '假日未加班(天)', '假日加班8hr(天)', '假日加班10hr+(天)', '假日加班12hr+(天)', '備註'];
         headers2.forEach(h => {
             row1.push(h);
             row2.push(h);
@@ -935,9 +967,11 @@ app.get('/api/export/excel', async (req, res) => {
                 deduction: r.deduction,
                 allowance: r.allowance,
                 norm: r.norm,
+                w4: r.w4,
                 h0: r.h0,
                 h8: r.h8,
                 h10: r.h10,
+                h12: r.h12,
                 note: r.note
             };
 
