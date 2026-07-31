@@ -4,13 +4,7 @@
    ================================================================ */
 
 :root {
-  --bg-gradient: linear-gradient(150deg,
-    #c9d8ee 0%,
-    #d8e6f4 25%,
-    #e4edf7 50%,
-    #d4e0f0 75%,
-    #ccd7ec 100%
-  );
+  --bg-gradient: #ffffff;
 
   /* Ultra-transparent Liquid Glass */
   --glass-bg:        rgba(255, 255, 255, 0.22);
@@ -507,8 +501,8 @@ body {
 }
 
 .styled-select {
-  background: rgba(255, 255, 255, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: #ffffff;
+  border: 2px solid #b3c0d1;
   border-radius: var(--border-radius-md);
   padding: 0.5rem 1rem;
   color: var(--text-primary);

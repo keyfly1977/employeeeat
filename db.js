@@ -58,13 +58,14 @@ db.serialize(() => {
 
     // 初始化預設設定
     const defaultSettings = {
-        'bento_price': '60',
-        'foreign_holiday_allowance': '100',
-        'foreign_holiday_ot_8hr_allowance': '125',
-        'foreign_holiday_ot_10hr_allowance': '150',
-        'foreign_holiday_ot_12hr_allowance': '150',
-        'foreign_base_allowance': '1000',
-        'taiwanese_meal_allowance': '1800',
+        'bento_price': '60',                                  // 当日便當價
+        'meal_subsidy_per_meal': '70',                        // 公司每餐補助
+        'fixed_monthly_allowance': '300',                     // 每月固定津貼（全員）
+        'foreign_holiday_no_ot_allowance': '100',             // 外勞特殊日毎日（返鄉/請假/假日休息）
+        'universal_weekday_ot_4hr_allowance': '75',           // 平日加班4hr以上
+        'universal_holiday_ot_8hr_allowance': '75',           // 假日8hr以上
+        'universal_holiday_ot_10hr_allowance': '150',         // 假日10hr以上
+        'universal_holiday_ot_12hr_allowance': '225',         // 假日12hr以上
         'ramadan_start': '2026-02-18',
         'ramadan_end': '2026-03-19'
     };

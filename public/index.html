@@ -122,9 +122,10 @@
     .form-group input {
       width: 100%;
       padding: 12px 16px;
-      border: 1px solid var(--glass-border);
+      border: 2px solid #b3c0d1;
       border-radius: var(--border-radius-sm);
-      background: rgba(255, 255, 255, 0.6);
+      background: #ffffff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05);
       font-size: 1.1rem;
       outline: none;
       transition: var(--transition-smooth);
@@ -261,10 +262,10 @@
               今日名單</h3>
             <div style="display: flex; align-items: center;">
               <input type="text" id="guard-search" placeholder="🔍 搜尋工號或姓名..."
-                style="padding: 10px 16px; margin-right: 15px; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.6); font-size: 1rem; width: 220px; outline: none; transition: 0.3s;"
+                style="padding: 10px 16px; margin-right: 15px; border: 2px solid #b3c0d1; border-radius: 8px; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05); font-size: 1rem; width: 220px; outline: none; transition: 0.3s;"
                 oninput="renderTable()"
-                onfocus="this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.2)'"
-                onblur="this.style.background='rgba(255,255,255,0.6)'; this.style.boxShadow='none'">
+                onfocus="this.style.borderColor='var(--color-blue)'; this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.2)'"
+                onblur="this.style.borderColor='#b3c0d1'; this.style.boxShadow='0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05)'">
               <button onclick="loadMeals()" class="btn-primary"
                 style="background: var(--glass-bg); color: var(--text-primary); margin-right: 15px;">🔄 重新整理</button>
               <button id="btn-save-all" onclick="saveAllMeals()" class="btn-primary"
@@ -585,15 +586,15 @@
         <h2 style="margin-top: 0; margin-bottom: 25px;">🔍 歷史查詢 (唯讀)</h2>
         <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
           <span style="color: var(--text-secondary); font-weight: 500;">區間:</span>
-          <input type="date" id="q-start-date" class="form-group"
-            style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <input type="date" id="q-start-date"
+            style="padding: 10px; border-radius: 5px; border: 2px solid #b3c0d1; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05); outline: none;">
           <span style="color: var(--text-secondary);">~</span>
-          <input type="date" id="q-end-date" class="form-group"
-            style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
-          <input type="text" id="q-empno" placeholder="請輸入工號" class="form-group"
-            style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
-          <input type="text" id="q-name" placeholder="請輸入姓名" class="form-group"
-            style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
+          <input type="date" id="q-end-date"
+            style="padding: 10px; border-radius: 5px; border: 2px solid #b3c0d1; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05); outline: none;">
+          <input type="text" id="q-empno" placeholder="請輸入工號"
+            style="padding: 10px; border-radius: 5px; border: 2px solid #b3c0d1; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05); outline: none;">
+          <input type="text" id="q-name" placeholder="請輸入姓名"
+            style="padding: 10px; border-radius: 5px; border: 2px solid #b3c0d1; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05); outline: none;">
           <button onclick="executeQuery()" class="btn-primary" style="padding: 10px 20px;">查詢</button>
         </div>
 
@@ -624,7 +625,16 @@
   </div>
 
   <script>
+    let adminUnlocked = false;
     function switchTab(tabId) {
+      if (tabId === 'admin' && !adminUnlocked) {
+        const pwd = prompt("請輸入總務設定密碼：");
+        if (pwd !== "5252") {
+          alert("密碼錯誤，無法進入總務設定");
+          return;
+        }
+        adminUnlocked = true;
+      }
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-tab').classList.add('active');
@@ -1156,7 +1166,7 @@
 
       const lunchBoxStyle = `flex:1; background: ${isLunchActive ? 'rgba(10,132,255,0.1)' : 'rgba(255,255,255,0.5)'}; padding: 15px; border-radius: 8px; border: 2px solid ${isLunchActive ? 'var(--color-blue)' : 'transparent'}; transition: all 0.3s ease; transform: ${isLunchActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isLunchActive ? '0 4px 12px rgba(10,132,255,0.2)' : 'none'};`;
       const dinnerBoxStyle = `flex:1; background: ${isDinnerActive ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.5)'}; padding: 15px; border-radius: 8px; border: 2px solid ${isDinnerActive ? 'var(--color-orange)' : 'transparent'}; transition: all 0.3s ease; transform: ${isDinnerActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isDinnerActive ? '0 4px 12px rgba(255,159,10,0.2)' : 'none'};`;
-      const ramadanBoxStyle = `flex:1; background: rgba(175,82,222,0.08); padding: 15px; border-radius: 8px; border: 2px solid ${isRamadanActive ? 'var(--color-purple, #af52de)' : 'rgba(175,82,222,0.2)'}; cursor: pointer; transition: all 0.3s ease; transform: ${isRamadanActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isRamadanActive ? '0 4px 12px rgba(175,82,222,0.2)' : 'none'};`;
+      const ramadanBoxStyle = `flex:1; background: transparent; padding: 15px; border-radius: 8px; border: 2px solid ${isRamadanActive ? 'var(--color-purple, #af52de)' : 'rgba(175,82,222,0.2)'}; cursor: pointer; transition: all 0.3s ease; transform: ${isRamadanActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isRamadanActive ? '0 4px 12px rgba(175,82,222,0.2)' : 'none'};`;
 
       document.getElementById('meal-summary').innerHTML = `
           <div style="${lunchBoxStyle}">

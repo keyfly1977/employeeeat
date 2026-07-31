@@ -660,10 +660,9 @@ async function getFinanceData(startStr, endStr) {
     const ramadanStartStr = s['ramadan_start'];
     const ramadanEndStr = s['ramadan_end'];
     const bentoPrice = parseInt(s['bento_price'] || 60);
-    const twAllowance = parseInt(s['taiwanese_meal_allowance'] || 1800);
-    const frHolidayNoOT = parseInt(s['foreign_holiday_no_ot_allowance'] || 100);
-    const frBaseAllowance = parseInt(s['foreign_base_allowance'] || 300);
-    const twBaseAllowance = parseInt(s['taiwanese_base_allowance'] || 300);
+    const mealSubsidy = parseInt(s['meal_subsidy_per_meal'] || 70);  // company subsidy per meal eaten
+    const fixedAllowance = parseInt(s['fixed_monthly_allowance'] || 300); // fixed 300 per month
+    const foreignSpecialDayAllowance = parseInt(s['foreign_holiday_no_ot_allowance'] || 100); // 返鄉/請假/假日休息 100/day
     const ot4Allowance = parseInt(s['universal_weekday_ot_4hr_allowance'] || 75);
     const ot8Allowance = parseInt(s['universal_holiday_ot_8hr_allowance'] || 75);
     const ot10Allowance = parseInt(s['universal_holiday_ot_10hr_allowance'] || 150);
@@ -703,7 +702,7 @@ async function getFinanceData(startStr, endStr) {
                 no_accommodation: dbEmp.no_accommodation === 1,
                 no_holiday_allowance: false,
                 diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
-                stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0, hol_12hr: 0, weekday_ot_4hr: 0, free_dinners: 0 },
+                stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0, hol_12hr: 0, weekday_ot_4hr: 0, free_dinners: 0, weekday_meals: 0, foreign_special_days: 0 },
                 days: {}
             };
         }
@@ -730,6 +729,7 @@ async function getFinanceData(startStr, endStr) {
         const isHoliday = m.is_holiday === 1;
         const otHours = m.ot_hours || 0;
 
+        // Free dinners: weekday OT >= 2hr dinner is free AND subsidy-eligible
         if (hasDinner && !isHoliday && otHours >= 2) {
             e.stats.free_dinners++;
         }
@@ -739,13 +739,31 @@ async function getFinanceData(startStr, endStr) {
                 if (otHours >= 12) e.stats.hol_12hr++;
                 else if (otHours >= 10) e.stats.hol_10hr++;
                 else if (otHours >= 8) e.stats.hol_8hr++;
-                else e.stats.hol_no_ot++;
+                else {
+                    e.stats.hol_no_ot++;
+                    // Foreign worker: holiday with no OT = special day, give 100
+                    if (e.is_foreign) e.stats.foreign_special_days++;
+                }
+            } else {
+                // In return home period (holiday) = foreign special day
+                if (e.is_foreign) e.stats.foreign_special_days++;
             }
         } else {
             if (!inReturnHomePeriod) {
                 e.stats.normal_days++;
                 if (otHours >= 4) e.stats.weekday_ot_4hr++;
+                // Count weekday meals eaten (for 70/meal subsidy)
+                const mealsToday = (hasLunch ? 1 : 0) + (hasDinner ? 1 : 0);
+                e.stats.weekday_meals += mealsToday;
+            } else {
+                // Returning home on weekday = foreign special day
+                if (e.is_foreign) e.stats.foreign_special_days++;
             }
+        }
+
+        // Foreign worker on leave = foreign special day
+        if (e.is_foreign && m.status === 'leave' && !inReturnHomePeriod) {
+            e.stats.foreign_special_days++;
         }
         
         let cellNote = '';
@@ -785,30 +803,22 @@ async function getFinanceData(startStr, endStr) {
         const chargeableMeals = Math.max(0, totalMeals - e.stats.free_dinners);
         const deduction = chargeableMeals * bentoPrice;
 
-        let allowance = 0;
         let note = '';
         
+        // OT subsidies (universal for all)
         const otSubsidies = (e.stats.weekday_ot_4hr * ot4Allowance) +
                             (e.stats.hol_8hr * ot8Allowance) +
                             (e.stats.hol_10hr * ot10Allowance) +
                             (e.stats.hol_12hr * ot12Allowance);
 
-        if (e.is_foreign) {
-            const frAllowance = parseInt(s['foreign_allowance'] || 0);
-            if (e.no_accommodation) {
-                allowance = otSubsidies + frAllowance;
-                note = '無住宿 (不發底數)';
-            } else if (e.is_returning_home) {
-                const proratedBase = Math.round((frBaseAllowance / 30) * e.stats.normal_days);
-                allowance = proratedBase + (e.stats.hol_no_ot * frHolidayNoOT) + otSubsidies + frAllowance;
-                note = `返鄉中 (底數依比例: ${proratedBase})`;
-            } else {
-                allowance = frBaseAllowance + (e.stats.hol_no_ot * frHolidayNoOT) + otSubsidies + frAllowance;
-            }
-        } else {
-            allowance = Math.round((twAllowance / 30) * e.stats.normal_days) + 
-                        twBaseAllowance + otSubsidies;
-        }
+        // Interpretation A:
+        //   allowance = 固定300 + (平日有吃便當的餐數 × 70) + 加班補貼 + (外勞特殊天數 × 100)
+        const weekdayMealSubsidy = e.stats.weekday_meals * mealSubsidy;
+        const foreignSpecialSubsidy = e.is_foreign ? (e.stats.foreign_special_days * foreignSpecialDayAllowance) : 0;
+        const allowance = fixedAllowance + weekdayMealSubsidy + otSubsidies + foreignSpecialSubsidy;
+
+        if (e.is_returning_home) note = '返鄉中';
+        if (e.no_accommodation) note = (note ? note + ' ' : '') + '無住宿';
 
         if (totalMeals === 0 && allowance === 0 && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 

@@ -12,6 +12,7 @@
     "express": "^4.19.2",
     "pdf-to-printer": "^5.8.0",
     "puppeteer": "^25.4.0",
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^6.0.1",
+    "xlsx": "^0.18.5"
   }
 }

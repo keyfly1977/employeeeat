@@ -1,39 +1,21 @@
-const ExcelJS = require('exceljs');
+const XLSX = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 
-async function readExcel(filePath) {
-    console.log(`\n--- Reading ${filePath} ---`);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
+function readExcel() {
+    const files = fs.readdirSync(__dirname);
+    const excelFile = files.find(f => f.includes('財務的伙食費'));
+    console.log("Reading:", excelFile);
+    const workbook = XLSX.readFile(path.join(__dirname, excelFile));
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
     
-    workbook.eachSheet((worksheet, sheetId) => {
-        console.log(`Sheet: ${worksheet.name}`);
-        
-        let rowCount = 0;
-        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-            if (rowCount < 5) {
-                let rowValues = [];
-                row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                    if (cell.type === ExcelJS.ValueType.Formula) {
-                        rowValues.push(`[Formula: ${cell.formula} | Result: ${cell.result}]`);
-                    } else {
-                        rowValues.push(cell.value);
-                    }
-                });
-                console.log(`Row ${rowNumber}: `, rowValues);
-            }
-            rowCount++;
-        });
-        console.log(`Total rows: ${rowCount}`);
-    });
-}
-
-async function main() {
-    try {
-        await readExcel('./總務的伙食費115年.xlsx');
-        await readExcel('./財務的伙食費115年.xlsx');
-    } catch (error) {
-        console.error('Error reading excel files:', error);
+    for (let i = 0; i < 40; i++) {
+        if (data[i]) {
+            console.log(`Row ${i}: `, data[i].join(', '));
+        }
     }
 }
 
-main();
+readExcel();
