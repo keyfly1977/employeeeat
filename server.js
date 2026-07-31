@@ -83,6 +83,45 @@ function generateMockData() {
 // Backend route to query attendance and OT, combined with local sqlite overrides
 
 // Helper to get meals for a specific date
+
+async function getMealsFromLocal(dateStr, dbEmps, settings) {
+    const db = require('./db');
+    return new Promise((resolve) => {
+        db.all(`SELECT m.*, e.emp_no, e.name, e.department, e.is_foreign, e.diet_type 
+                FROM meal_records m
+                JOIN employees e ON m.emp_id = e.emp_id
+                WHERE m.date = ?`, [dateStr], (err, rows) => {
+            if (err || !rows) return resolve([]);
+            
+            const results = rows.map(r => {
+                const isForeign = r.is_foreign === 1;
+                const natStr = isForeign ? '外籍' : '本籍';
+                return {
+                    date: r.date,
+                    empId: r.emp_id,
+                    empNo: r.emp_no,
+                    name: r.name,
+                    empName: r.name,
+                    deptName: r.department,
+                    status: 'present', // Snapshot queries don't track leave/absent directly, just assume present if saved, or just show 'saved'
+                    cardTime: '',
+                    leaveInfo: null,
+                    dietType: r.diet_type || '葷食',
+                    optOutLunch: false,
+                    optOutDinner: false,
+                    noHolidayAllowance: false,
+                    nationality: natStr,
+                    hasLunch: r.has_lunch === 1,
+                    hasDinner: r.has_dinner === 1,
+                    hasOt: (r.ot_hours || 0) > 0,
+                    otHours: r.ot_hours || 0
+                };
+            });
+            resolve(results);
+        });
+    });
+}
+
 async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbEmps, settings) {
     const config = require('./config.json');
     // 3. Fetch Clock-in comparison results
@@ -137,6 +176,22 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         leaveMap.set(leave.EMP_ID, leave);
     });
 
+    // 6b. Fetch Leave Item Names (leaveitem)
+    const leaveItemMap = new Map();
+    try {
+        const leaveItemRes = await fetch(`${config.HR_API_BASE}/api/am/leaveitem`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
+          body: JSON.stringify({ CO_ID: config.CO_ID, LIMIT: 200 })
+        });
+        if (leaveItemRes.ok) {
+            const leaveItemResult = await leaveItemRes.json();
+            (leaveItemResult.data || []).forEach(item => {
+                leaveItemMap.set(item.LEAVEITEM_ID, item.LEAVEITEM_NAME);
+            });
+        }
+    } catch(e) { /* ignore */ }
+
     const dietMap = {};
     const optOutLunchMap = {};
     const optOutDinnerMap = {};
@@ -168,7 +223,8 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         const isBoard = deptStr.includes('董事') || (emp.EMP_NAME && emp.EMP_NAME.includes('董事長'));
         if (isBoard) return false;
         if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return false; // 忽略 J 開頭工號
-        // if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; 
+        if (emp.LEAVE_DATE || emp.QUIT_DATE) return false; // 忽略離職人員
+        if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; // 不在刷卡應出勤名單且未請假者，略過（免刷卡人員）
         return true;
     })
     .map(emp => {
@@ -196,7 +252,9 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         if (emp.NATIONALITY === 'VN') nationalityStr = "越南";
         if (emp.NATIONALITY === 'TH') nationalityStr = "泰國";
         
-        // Determine diet type (priority: db > default)
+        // Determine diet type
+        // Priority: Ramadan (time-based, always wins) > DB setting > default
+        // Note: '齋戒' in DB is a past snapshot; it must NOT override Ramadan calculation
         let defaultDiet = '葷食';
         let isRamadan = false;
         if (isIndonesian) {
@@ -206,7 +264,7 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             if (settings && settings.ramadan_start && settings.ramadan_end) {
                 const rStart = new Date(settings.ramadan_start);
                 const rEnd = new Date(settings.ramadan_end);
-                const current = new Date(targetDateStr.replace(/\//g, '-')); // HR API returns YYYY/MM/DD
+                const current = new Date(targetDateStr.replace(/\//g, '-'));
                 if (current >= rStart && current <= rEnd) {
                     isRamadan = true;
                 }
@@ -215,13 +273,15 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
 
         const dbDiet = dietMap[emp.EMP_ID];
         let finalDiet = defaultDiet;
+        // DB diet applies only if it's not '齋戒' (which is time-based, not a permanent setting)
+        if (dbDiet && dbDiet !== '齋戒') finalDiet = dbDiet;
+        // Ramadan always takes final priority for Indonesian employees
         if (isRamadan) finalDiet = '齋戒';
-        if (dbDiet) finalDiet = dbDiet;
 
         let optOutLunch = optOutLunchMap[emp.EMP_ID] || false;
         let optOutDinner = optOutDinnerMap[emp.EMP_ID] || false;
 
-        // Auto opt-out lunch during Ramadan ONLY IF they are actually doing Ramadan diet
+        // Auto opt-out lunch during Ramadan (highest priority, overrides DB opt-out setting)
         if (isRamadan && finalDiet === '齋戒') {
             optOutLunch = true;
         }
@@ -246,7 +306,8 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             status,
             cardTime,
             leaveInfo: leave ? {
-                reason: leave.REASON || '請假',
+                leaveName: leaveItemMap.get(leave.LEAVEITEM_ID) || '請假',
+                reason: leave.REASON || '',
                 start: leave.LEAVE_START ? leave.LEAVE_START.split(' ')[1].substring(0,5) : '',
                 end: leave.LEAVE_END ? leave.LEAVE_END.split(' ')[1].substring(0,5) : ''
             } : null,
@@ -310,14 +371,20 @@ app.get('/api/meals/today', async (req, res) => {
 
     // Sync employees to local DB
     db.serialize(() => {
-        const stmt = db.prepare(`INSERT INTO employees (emp_id, emp_no, name, department, is_foreign) VALUES (?, ?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET emp_no=excluded.emp_no, name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign`);
+        const stmt = db.prepare(`INSERT INTO employees (emp_id, emp_no, name, department, is_foreign, nationality) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(emp_id) DO UPDATE SET emp_no=excluded.emp_no, name=excluded.name, department=excluded.department, is_foreign=excluded.is_foreign, nationality=excluded.nationality`);
         employees.forEach(emp => {
             if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return; // 忽略 J 開頭工號
             const dept = emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配';
             if (dept.includes('董事')) return; // 忽略董事會
-            if (emp.LEAVE_DATE) return; // 忽略離職人員
+            if (emp.LEAVE_DATE || emp.QUIT_DATE) return; // 忽略離職人員
             const isForeign = emp.NATIONALITY !== 'TW' ? 1 : 0;
-            stmt.run(emp.EMP_ID, emp.EMP_NO, emp.EMP_NAME, dept, isForeign);
+            
+            let nationalityStr = "中華民國";
+            if (emp.NATIONALITY === 'ID') nationalityStr = "印尼";
+            if (emp.NATIONALITY === 'VN') nationalityStr = "越南";
+            if (emp.NATIONALITY === 'TH') nationalityStr = "泰國";
+
+            stmt.run(emp.EMP_ID, emp.EMP_NO, emp.EMP_NAME, dept, isForeign, nationalityStr);
         });
         stmt.finalize();
     });
@@ -338,7 +405,9 @@ app.get('/api/meals/today', async (req, res) => {
 
     // Build dates array
     let targetDates = [];
+    let isHistorical = false;
     if (isRangeQuery) {
+        isHistorical = true;
         const s = new Date(startDate);
         const e = new Date(endDate);
         const diffTime = Math.abs(e - s);
@@ -353,6 +422,7 @@ app.get('/api/meals/today', async (req, res) => {
             targetDates.push(`${y}/${m}/${day}`);
         }
     } else if (queryDate) {
+        isHistorical = true;
         targetDates = [queryDate.replace(/-/g, '/')];
     } else {
         const todayObj = new Date();
@@ -364,8 +434,13 @@ app.get('/api/meals/today', async (req, res) => {
 
     let finalCombinedList = [];
     for (const d of targetDates) {
-        const list = await getMealsForDate(d, mainToken, otToken, employees, dbEmps, settings);
-        finalCombinedList = finalCombinedList.concat(list);
+        if (isHistorical) {
+            const list = await getMealsFromLocal(d, dbEmps, settings);
+            finalCombinedList = finalCombinedList.concat(list);
+        } else {
+            const list = await getMealsForDate(d, mainToken, otToken, employees, dbEmps, settings);
+            finalCombinedList = finalCombinedList.concat(list);
+        }
     }
 
     const responsePayload = {
@@ -458,6 +533,48 @@ app.post('/api/meals/update', (req, res) => {
             });
 });
 
+// Save all meals as a snapshot for today
+app.post('/api/meals/save_all', (req, res) => {
+    const { meals } = req.body;
+    if (!meals || !Array.isArray(meals)) return res.status(400).json({ error: "Invalid meals data" });
+
+    const todayObj = new Date();
+    const yyyy = todayObj.getFullYear();
+    const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(todayObj.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}/${mm}/${dd}`;
+
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        const stmt = db.prepare(`
+            INSERT INTO meal_records (date, emp_id, has_lunch, has_dinner, is_holiday, ot_hours, status, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(date, emp_id) DO UPDATE SET 
+            has_lunch=excluded.has_lunch, has_dinner=excluded.has_dinner, is_holiday=excluded.is_holiday, ot_hours=excluded.ot_hours, status=excluded.status, updated_at=CURRENT_TIMESTAMP
+        `);
+        
+        const isHoliday = getDatesInRange(todayStr, todayStr)[0]?.isHoliday ? 1 : 0;
+
+        for (const m of meals) {
+            stmt.run([todayStr, m.empId, m.hasLunch ? 1 : 0, m.hasDinner ? 1 : 0, isHoliday, m.otHours || 0, m.status || 'present']);
+        }
+        
+        stmt.finalize((err) => {
+            if (err) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                    return res.status(500).json({ success: false, error: commitErr.message });
+                }
+                cachedData = null;
+                res.json({ success: true });
+            });
+        });
+    });
+});
+
 // Get settings
 app.get('/api/settings', (req, res) => {
     db.all(`SELECT * FROM settings`, (err, rows) => {
@@ -506,29 +623,8 @@ function getDatesInRange(startStr, endStr) {
 }
 
 async function getFinanceData(startStr, endStr) {
-    const config = require('./config.json');
     const db = require('./db');
 
-    let mainToken = '';
-    let otToken = '';
-    try {
-        mainToken = await getAuthToken(config.USER_ACCOUNT, config.USER_PWD);
-        otToken = mainToken;
-        if (config.OT_USER_ACCOUNT && config.OT_USER_PWD) {
-            otToken = await getAuthToken(config.OT_USER_ACCOUNT, config.OT_USER_PWD);
-        }
-    } catch (e) {
-        throw new Error('無法取得 HR 系統授權 Token: ' + e.message);
-    }
-
-    const empRes = await fetch(`${config.HR_API_BASE}/api/ed/emp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
-      body: JSON.stringify({ CO_ID: config.CO_ID, LIMIT: 1000 })
-    });
-    if (!empRes.ok) throw new Error(`Fetch employees failed: ${empRes.status}`);
-    const empResult = await empRes.json();
-    const employees = empResult.data || [];
 
     const dbEmps = await new Promise((resolve) => {
         db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
@@ -542,6 +638,8 @@ async function getFinanceData(startStr, endStr) {
     const s = {};
     settingRows.forEach(r => s[r.key] = r.value);
     
+    const ramadanStartStr = s['ramadan_start'];
+    const ramadanEndStr = s['ramadan_end'];
     const bentoPrice = parseInt(s['bento_price'] || 60);
     const twAllowance = parseInt(s['taiwanese_meal_allowance'] || 1800);
     const frHolidayNoOT = parseInt(s['foreign_holiday_allowance'] || 100);
@@ -553,86 +651,110 @@ async function getFinanceData(startStr, endStr) {
     const dates = getDatesInRange(startStr, endStr);
     if (dates.length === 0) return { dates: [], rows: [] };
 
+    // Fetch ALL meal records for this date range from local DB
+    const placeholders = dates.map(() => '?').join(',');
+    const dateStrings = dates.map(d => d.date);
+    
+    const records = await new Promise((resolve) => {
+        db.all(`SELECT * FROM meal_records WHERE date IN (${placeholders})`, dateStrings, (err, rows) => {
+            resolve(rows || []);
+        });
+    });
+
     const empMap = {};
 
-    for (const d of dates) {
-        const dailyList = await getMealsForDate(d.date, mainToken, otToken, employees, dbEmps, s);
-        dailyList.forEach(m => {
-            if (m.empNo && m.empNo.startsWith('J')) return; 
-            if (m.deptName && m.deptName.includes('董事')) return;
+    records.forEach(m => {
+        const dbEmp = dbEmpsMap[m.emp_id];
+        if (!dbEmp) return; // Ignore if employee doesn't exist in local DB (shouldn't happen)
+        
+        if (dbEmp.emp_no && dbEmp.emp_no.startsWith('J')) return; 
+        if (dbEmp.department && dbEmp.department.includes('董事')) return;
 
-            if (!empMap[m.empId]) {
-                const dbEmp = dbEmpsMap[m.empId];
-                empMap[m.empId] = {
-                    emp_no: m.empNo,
-                    name: m.name,
-                    department: m.deptName,
-                    is_foreign: dbEmp ? dbEmp.is_foreign === 1 : (m.nationality !== '中華民國'),
-                    is_returning_home: dbEmp ? dbEmp.is_returning_home === 1 : false,
-                    return_home_start: dbEmp ? dbEmp.return_home_start : null,
-                    return_home_end: dbEmp ? dbEmp.return_home_end : null,
-                    no_accommodation: dbEmp ? dbEmp.no_accommodation === 1 : false,
-                    no_holiday_allowance: m.noHolidayAllowance ? 1 : 0,
-                    diet_type: m.dietType,
-                    stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0 },
-                    days: {}
-                };
-            }
-            const e = empMap[m.empId];
-            e.stats.lunch += m.hasLunch ? 1 : 0;
-            e.stats.dinner += m.hasDinner ? 1 : 0;
-            
-            const mDate = new Date(m.date);
-            let inReturnHomePeriod = false;
-            if (e.is_returning_home && e.return_home_start && e.return_home_end) {
-                const [rsy, rsm, rsd] = e.return_home_start.split(/[-/]/);
-                const [rey, rem, red] = e.return_home_end.split(/[-/]/);
-                const sDate = new Date(rsy, rsm - 1, rsd);
-                const eDate = new Date(rey, rem - 1, red);
-                if (mDate >= sDate && mDate <= eDate) {
-                    inReturnHomePeriod = true;
-                }
-            }
-
-            if (d.isHoliday) {
-                if (!inReturnHomePeriod) {
-                    if (m.otHours >= 10) e.stats.hol_10hr++;
-                    else if (m.otHours >= 8) e.stats.hol_8hr++;
-                    else e.stats.hol_no_ot++;
-                }
-            } else {
-                if (!inReturnHomePeriod) {
-                    e.stats.normal_days++;
-                }
-            }
-            
-            let cellNote = '';
-            if (inReturnHomePeriod) cellNote = '返鄉';
-            else if (m.dietType === '齋戒') cellNote = '齋戒';
-            
-            e.days[m.date] = {
-                l: m.hasLunch,
-                d: m.hasDinner,
-                note: cellNote,
-                lText: '',
-                dText: ''
+        if (!empMap[m.emp_id]) {
+            empMap[m.emp_id] = {
+                emp_no: dbEmp.emp_no,
+                name: dbEmp.name,
+                department: dbEmp.department,
+                is_foreign: dbEmp.is_foreign === 1,
+                is_returning_home: dbEmp.is_returning_home === 1,
+                return_home_start: dbEmp.return_home_start,
+                return_home_end: dbEmp.return_home_end,
+                no_accommodation: dbEmp.no_accommodation === 1,
+                no_holiday_allowance: false, // In local DB only, this comes from employees table, but we don't use it directly here anyway
+                diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0 },
+                days: {}
             };
-            
-            if (cellNote === '返鄉') {
-                e.days[m.date].lText = '返鄉';
-                e.days[m.date].dText = '返鄉';
-            } else if (cellNote === '齋戒') {
-                if (!m.hasLunch) e.days[m.date].lText = '齋戒';
-                if (!m.hasDinner) e.days[m.date].dText = '齋戒';
+        }
+        
+        const e = empMap[m.emp_id];
+        const hasLunch = m.has_lunch === 1;
+        const hasDinner = m.has_dinner === 1;
+        
+        e.stats.lunch += hasLunch ? 1 : 0;
+        e.stats.dinner += hasDinner ? 1 : 0;
+        
+        const mDate = new Date(m.date);
+        let inReturnHomePeriod = false;
+        if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+            const [rsy, rsm, rsd] = e.return_home_start.split(/[-/]/);
+            const [rey, rem, red] = e.return_home_end.split(/[-/]/);
+            const sDate = new Date(rsy, rsm - 1, rsd);
+            const eDate = new Date(rey, rem - 1, red);
+            if (mDate >= sDate && mDate <= eDate) {
+                inReturnHomePeriod = true;
             }
-        });
-    }
+        }
+
+        const isHoliday = m.is_holiday === 1;
+        const otHours = m.ot_hours || 0;
+
+        if (isHoliday) {
+            if (!inReturnHomePeriod) {
+                if (otHours >= 10) e.stats.hol_10hr++;
+                else if (otHours >= 8) e.stats.hol_8hr++;
+                else e.stats.hol_no_ot++;
+            }
+        } else {
+            if (!inReturnHomePeriod) {
+                e.stats.normal_days++;
+            }
+        }
+        
+        let cellNote = '';
+        if (inReturnHomePeriod) cellNote = '返鄉';
+                else if (e.diet_type === '齋戒') {
+            if (ramadanStartStr && ramadanEndStr) {
+                const rs = new Date(ramadanStartStr.replace(/-/g, '/'));
+                const re = new Date(ramadanEndStr.replace(/-/g, '/'));
+                if (mDate >= rs && mDate <= re) cellNote = '齋戒';
+            }
+        }
+        else if (m.status === 'leave') cellNote = '請假';
+        
+        e.days[m.date] = {
+            l: hasLunch,
+            d: hasDinner,
+            note: cellNote,
+            lText: '',
+            dText: ''
+        };
+        
+        if (cellNote === '返鄉') {
+            e.days[m.date].lText = '返鄉';
+            e.days[m.date].dText = '返鄉';
+        } else if (cellNote === '齋戒') {
+            if (!hasLunch) e.days[m.date].lText = '齋戒';
+            if (!hasDinner) e.days[m.date].dText = '齋戒';
+        } else if (cellNote === '請假') {
+            if (!hasLunch) e.days[m.date].lText = '請假';
+            if (!hasDinner) e.days[m.date].dText = '請假';
+        }
+    });
 
     const rows = [];
     Object.values(empMap).forEach(e => {
         const totalMeals = e.stats.lunch + e.stats.dinner;
-        if (totalMeals === 0) return; 
-
         const deduction = totalMeals * bentoPrice;
 
         let allowance = 0;
@@ -661,6 +783,8 @@ async function getFinanceData(startStr, endStr) {
                         (e.stats.hol_10hr * frHoliday10hr);
         }
 
+        if (totalMeals === 0 && allowance === 0 && e.diet_type !== '齋戒' && !e.is_returning_home) return;
+
         dates.forEach(d => {
             if (!e.days[d.date]) {
                 let cellNote = '';
@@ -673,7 +797,13 @@ async function getFinanceData(startStr, endStr) {
                     const eDate = new Date(rey, rem - 1, red);
                     if (mDate >= sDate && mDate <= eDate) cellNote = '返鄉';
                 }
-                if (!cellNote && e.diet_type === '齋戒') cellNote = '齋戒';
+                                if (!cellNote && e.diet_type === '齋戒') {
+                    if (ramadanStartStr && ramadanEndStr) {
+                        const rs = new Date(ramadanStartStr.replace(/-/g, '/'));
+                        const re = new Date(ramadanEndStr.replace(/-/g, '/'));
+                        if (mDate >= rs && mDate <= re) cellNote = '齋戒';
+                    }
+                }
                 
                 e.days[d.date] = {
                     l: false, d: false, note: cellNote, lText: '', dText: ''
@@ -706,6 +836,7 @@ async function getFinanceData(startStr, endStr) {
     return { dates, rows };
 }
 
+
 // Finance Preview
 app.get('/api/finance/preview', async (req, res) => {
     try {
@@ -729,6 +860,7 @@ app.get('/api/export/excel', async (req, res) => {
         
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet(`餐費結算_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}`);
+        sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
         
         const baseColumns1 = [
             { key: 'id', width: 12 },
@@ -821,13 +953,20 @@ app.get('/api/export/excel', async (req, res) => {
             let cellColIndex = 4;
             data.dates.forEach((d, i) => {
                 const dayData = r.days[d.date];
-                const bg = d.isHoliday ? 'FFF2F2F2' : (dayData.note === '返鄉' ? 'FFFFF9C4' : (dayData.note === '齋戒' ? 'FFE8F5E9' : null));
+                const bg = dayData.note === '返鄉' ? 'FFFFF9C4' : 
+                           dayData.note === '齋戒' ? 'FFAF52DE' : 
+                           dayData.note === '請假' ? 'FFFFE0B2' : 
+                           d.isHoliday ? 'FFF2F2F2' : null;
                 
                 if (bg) {
                     const lCell = excelRow.getCell(cellColIndex);
                     const dCell = excelRow.getCell(cellColIndex + 1);
                     lCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
                     dCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                    if (bg === 'FFAF52DE') {
+                        lCell.font = { color: { argb: 'FFFFFFFF' } };
+                        dCell.font = { color: { argb: 'FFFFFFFF' } };
+                    }
                 }
                 
                 excelRow.getCell(cellColIndex).alignment = { vertical: 'middle', horizontal: 'center' };

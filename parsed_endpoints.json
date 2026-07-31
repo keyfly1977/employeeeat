@@ -1,0 +1,1127 @@
+[
+  {
+    "path": "/api/am/shift",
+    "method": "POST",
+    "summary": "班別基本檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nshift = {\n  \"SHIFT_ID\": number,               //班別_ID\n  \"CO_ID\": number,                  //公司_ID\n  \"SHIFT_CODE\": string,             //班別代碼\n  \"SHIFT_NAME\": string,             //班別名稱\n  \"SHIFT_NAME_JSON\": boject,        //班別名稱_JSON\n  \"SHIFT_ABBR_NAME\": string,        //班別簡稱\n  \"SHIFT_ABBR_NAME_JSON\": boject,   //班別簡稱_JSON\n  \"IS_FIX_SHIFT\": number,           //是否為固定班用途\n  \"IS_SA_SHIFT\": number,            //是否為排班用途\n  \"SHIFT_WORK_HOUR\": number,        //班別實際工時\n  \"IS_ACT\": number,                 //使用狀態\n  \"SORT_ORDER\": number,             //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/shift_worktime",
+    "method": "POST",
+    "summary": "班別工作時間檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nshift_worktime = {\n  \"CO_ID\": number,      //公司_ID\n  \"SHIFT_ID\": number,   //班別_ID\n  \"WEEKDAY\": number,    //星期別\n  \"DATA_TYPE\": string,  //資料類別\n  \"STIME\":date,         //時間起\n  \"ETIME\":date,         //時間迄\n},\n```\n"
+  },
+  {
+    "path": "/api/am/calendar_leave",
+    "method": "POST",
+    "summary": "行事曆類別檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\ncalendar_leave = {\n  \"CALENDAR_LEAVE_ID\": number,  //行事曆別_ID\n  \"LEAVE_NAME\": string,         //行事曆別名稱\n  \"LEAVE_NAME_JSON\": boject,    //行事曆別名稱_JSON\n  \"LEAVE_NAME_COLOR\": string,   //行事曆填滿顏色\n  \"TEXT_COLOR\": string,         //行事曆文字顏色\n  \"SORT_ORDER\": number,         //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/calendar_basic",
+    "method": "POST",
+    "summary": "行事曆基本資料檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\ncalendar_basic = {\n  \"CALENDAR_BASIC_ID\": number,//行事曆基本檔_ID\n  \"CO_ID\": number,//公司_ID\n  \"CALENDAR_CODE\": string,//行事曆代碼\n  \"CALENDAR_NAME\": string,//行事曆名稱\n  \"CALENDAR_NAME_JSON\": boject,//行事曆別名稱_JSON\n  \"IS_ACT\": number,//使用狀態\n  \"SORT_ORDER\": number,//排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/calendar_day",
+    "method": "POST",
+    "summary": "行事曆日檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\ncalendar_day = {\n  \"CO_ID\": number,//公司_ID\n  \"CALENDAR_BASIC_ID\": number,//行事曆基本檔_ID\n  \"CALENDAR_DATE\":date,//行事曆日期\n  \"CALENDAR_WEEK\": number,//星期\n  \"CALENDAR_LEAVE_ID\": number,//行事曆別_ID\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_worktime",
+    "method": "POST",
+    "summary": "員工班別資料展開檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nemp_worktime = {\n  \"CO_ID\": number,                //公司_ID\n  \"EMP_ID\": number,               //員工_ID\n  \"WORK_DATE\":date,               //應出勤日期\n  \"WORK_DATE_SEQ\": number,        //應出勤日期_分段\n  \"IS_EMPTY_WORKTIME\": number,    //當日是否未排班\n  \"IS_EMPTY_CALENDAR\": number,    //當日是否未設定行事曆\n  \"WORK_DATE_WEEK\": number,       //應出勤日期_星期\n  \"SHIFT_TYPE\": number,           //員工班別屬性\n  \"SHIFT_ID\": number,             //員工班別_ID\n  \"CALENDAR_BASIC_ID\": number,    //員工行事曆_ID\n  \"CALENDAR_LEAVE_ID\": number,    //員工行事曆類別_ID\n  \"WORK_LABEL_IDS\": string,       //班別標籤\n  \"IS_LEAVE_OVERTIME\": number,    //行事曆可否加班\n  \"WORKDAY_STIME\":date,           //班別曆日區間-起\n  \"WORKDAY_ETIME\":date,           //班別曆日區間-迄\n  \"CLOCK_FIRST_TIME\":date,        //班別最早有效刷卡時間起\n  \"CLOCK_LAST_TIME\":date,         //班別最晚有效刷卡時間迄\n  \"WORKTIME_START\":date,          //上班時間起\n  \"WORKTIME_END\":date,            //上班時間迄\n  \"WORK_HOURS\": number,           //班別時數\n  \"REAL_HOURS\": number,           //當日班別時數時數\n  \"PAY_TYPE\": string,             //加班支領方式\n},\n```\n"
+  },
+  {
+    "path": "/api/am/leaveitem",
+    "method": "POST",
+    "summary": "一般假勤項目檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nleaveitem = {\n  \"LEAVEITEM_ID\": number,       //假勤項目_ID\n  \"CO_ID\": number,              //公司_ID\n  \"LEAVEITEM_CODE\":string,      //假勤項目代碼\n  \"LEAVEITEM_NAME\":string,      //假勤項目名稱\n  \"LEAVEITEM_NAME_JSON\":boject, //假勤項目名稱_JSON\n  \"SPECIFIC_CODE\":string,       //特定代碼\n  \"UNIT\":string,                //假勤單位\n  \"UNIT_VALUE\": number,         //假勤單位(數值)\n  \"PERIOD_TYPE\":string,         //計算期間(種類)\n  \"SORT_ORDER\": number,         //排序\n  \"IS_ACT\": number,             //使用狀態\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_leave",
+    "method": "POST",
+    "summary": "員工請假主檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nemp_leave = {\n  \"EMP_LEAVE_ID\": number,         //ID\n  \"CO_ID\": number,                //公司_ID\n  \"EMP_ID\": number,               //員工_ID\n  \"LEAVEITEM_ID\": number,         //假勤項目_ID\n  \"EMP_LEAVE_EVENT_ID\": number,   //事件發生日_ID\n  \"LEAVE_START\":date,             //請假起始時間\n  \"LEAVE_END\":date,               //請假結束時間\n  \"LEAVE_VALUE\": number,          //合計扣假請假數\n  \"DED_VALUE\": number,            //合計扣除分鐘數\n  \"CANCEL_VALUE\": number,         //合計銷假數\n  \"UNIT\":string,                  //請假當時假勤單位\n  \"REASON\":string,                //請假原因\n  \"AGENT_IDS\":string,             //職務代理人_IDS\n  \"FILES\":string,                 //附件\n  \"NOTE\":string,                  //備註\n  \"LEAVE_SOURCE\": number,         //資料來源\n  \"WF_NO\":string,                 //WORKFLOW 表單編號\n  \"WF_RESULT\": number,            //表單狀態\n  \"WF_SIGN_TIME\":date,            //簽核完成時間\n  \"C_DATETIME\":date,              //新增_日期\n  \"E_DATETIME\":date,              //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_leave/daily",
+    "method": "POST",
+    "summary": "員工請假日檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nemp_leave_daily = {\n  \"EMP_LEAVE_ID\": number,       //請假主檔_ID\n  \"CO_ID\": number,              //公司_ID\n  \"EMP_ID\": number,             //員工_ID\n  \"LEAVEITEM_ID\": number,       //假勤項目_ID\n  \"LEAVE_DATE\":date,            //請假歸屬日期\n  \"LEAVE_DATE_SEQ\": number,     //請假歸屬日期分段\n  \"WORKTIME_START\":date,        //應上班時間起\n  \"WORKTIME_END\":date,          //應上班時間迄\n  \"LEAVED_START\":date,          //請假起始時間\n  \"LEAVED_END\":date,            //請假結束時間\n  \"LEAVE_MINS\": number,         //請假分鐘數\n  \"DED_MINS\": number,           //扣除分鐘數\n  \"CANCEL_MINS\": number,        //銷假分鐘數\n  \"DED_DETAIL\":string,          //扣除休息時間明細\n  \"UNIT\":string,                //請假當時假勤單位\n  \"DAY_TO_HOUR\": number,        //一天換小時\n  \"SHIFT_TYPE\": number,         //員工班別屬性\n  \"SHIFT_ID\": number,           //員工班別_ID\n  \"CALENDAR_BASIC_ID\": number,  //員工行事曆_ID\n  \"CALENDAR_LEAVE_ID\": number,  //員工行事曆類別_ID\n  \"CAL_STATUS\": number,         //結算狀態\n  \"SALARY_CLOSE_ID\": number,    //薪資結檔主檔_ID\n  \"C_DATETIME\":date,            //新增_日期\n  \"E_DATETIME\":date,            //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_ot",
+    "method": "POST",
+    "summary": "員工加班主檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nemp_ot = {\n  \"EMP_OT_ID\": number,        //ID\n  \"CO_ID\": number,            //公司_ID\n  \"EMP_ID\": number,           //員工_ID\n  \"OT_START\":date,            //加班申請起始時間\n  \"OT_END\":date,              //加班申請結束時間\n  \"OT_DATE\":date,             //加班歸屬日期\n  \"REASON\":string,            //加班原因\n  \"UNIT\":string,              //加班當時單位\n  \"OT_VALUE\": number,         //合計加班數\n  \"DED_MINS\": number,         //合計扣除分鐘數\n  \"PAY_VALUE\": number,        //合計支領加班費\n  \"CL_VALUE\": number,         //合計支領補休\n  \"FILES_UUID\":string,        //附件\n  \"NOTE\":string,              //備註\n  \"OT_SOURCE\": number,        //資料來源\n  \"WF_NO\":string,             //WORKFLOW 表單編號\n  \"WF_RESULT\": number,        //表單狀態\n  \"WF_SIGN_TIME\":date,        //簽核完成時間\n  \"CAL_STATUS\": number,       //結算狀態\n  \"SALARY_CLOSE_ID\": number,  //薪資結檔主檔_ID\n  \"CALENDAR_LEAVE_ID\": number, //員工行事曆類別_ID\n  \"OT_COEF_JSON\": array,      //折現倍率JSON\n  \"C_DATETIME\":date,          //新增_日期\n  \"E_DATETIME\":date,          //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_cardmatch",
+    "method": "POST",
+    "summary": "員工打卡比對結果檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nemp_cardmatch = {\n  \"EMP_CARDMATCH_ID\": number,           //ID\n  \"CO_ID\": number,                      //公司_ID\n  \"EMP_ID\": number,                     //員工_ID\n  \"WORK_DATE\":date,                     //應出勤日期\n  \"WORK_DATE_SEQ\": number,              //出勤日期分段\n  \"CARD_TYPE\": number,                  //打卡別\n  \"CARD_GROUP\": number,                 //打卡組別\n  \"IS_FLEXIBLE\": number,                //此段刷卡是否有彈性\n  \"FLEXIBLE_MIN\": number,               //實際彈性分鐘數\n  \"WORK_CARD_DATETIME\":date,            //應刷卡時間(不含彈性)\n  \"FLEXIBLE_CARD_DATETIME\":date,        //應刷卡時間(含彈性)\n  \"EMP_OT_ID\": number,                  //加班資料_ID\n  \"RANGE1_START\":date,                  //應打卡區間起(合理時間)\n  \"RANGE1_END\":date,                    //應打卡區間迄(合理時間)\n  \"RANGE2_START\":date,                  //應打卡區間起(不合理時間)\n  \"RANGE2_END\":date,                    //應打卡區間迄(不合理時間)\n  \"EMP_LEAVE_ID\": number,               //應打卡區間-請假主檔_ID\n  \"IS_REST_OVERTIME\": number,           //休息時間-可否加班\n  \"CARD_DATETIME\":date,                 //實際打卡時間\n  \"TEMP_UNIT\":string,                   //體溫單位\n  \"TEMP_VALUE\": number,                 //體溫值\n  \"CARD_SOURCE\": number,                //實際打卡資料來源\n  \"EMP_CARDDATA_ID\": number,            //實際打卡明細檔_ID\n  \"CARD_MATCH_STATUS\": number,          //異常比對結果\n  \"UNUSUAL_ACTION\": number,             //異常處理方式\n  \"UNUSUAL_REMARK\":string,              //異常處理備註\n  \"UNUSUAL_FILL_DATETIME\":date,         //異常處理_填寫日期\n  \"UNUSUAL_START\":date,                 //異常起始時間\n  \"UNUSUAL_END\":date,                   //異常結束時間\n  \"LATE_MIN\": number,                   //遲到分鐘數\n  \"EARLY_MIN\": number,                  //早退分鐘數\n  \"NOT_WORKING_MIN\": number,            //曠職分鐘數\n  \"EMP_ASK_LEAVE_BIZ_IDS\":string,       //已申請的請假IDS\n  \"OVER_ATTEND_STATUS\": number,         //超時出勤比對結果\n  \"OVER_ATTEND_ACTION\": number,         //超時出勤異常處理方式\n  \"OVER_ATTEND_DESC\":string,            //超時出勤回報_說明\n  \"OVER_ATTEND_FILL_TYPE\":string,       //超時出勤回報_填寫人員種類\n  \"OVER_ATTEND_FILL_DATETIME\":date,     //超時出勤回報_填寫日期\n  \"OVER_ATTEND_START\":date,             //超時出勤起始時間\n  \"OVER_ATTEND_END\":date,               //超時出勤結束時間\n  \"OVER_ATTEND_MIN\": number,            //超時出勤分鐘數\n  \"EMP_OVER_TIME_IDS\":string,           //超時出勤已申請的加班資料IDS\n  \"CAL_STATUS\": number,                 //假勤結算狀態\n  \"SALARY_CLOSE_ID\": number,            //薪資結檔主檔_ID\n  \"C_DATETIME\":date,                    //新增_日期\n  \"E_DATETIME\":date,                    //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_carddata",
+    "method": "POST",
+    "summary": "員工打卡明細資料檔資訊",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nemp_carddata = {\n  \"CO_ID\": number,          //公司_ID\n  \"EMP_ID\": number,         //員工_ID\n  \"EMP_NO\":string,          //匯入員工編號\n  \"CARDNO\":string,          //匯入卡號\n  \"CARD_DATETIME\":date,     //打卡時間\n  \"TEMP_UNIT\":string,       //體溫單位\n  \"TEMP_VALUE\": number,     //體溫值\n  \"CARD_TYPE\": number,      //原始打卡別\n  \"CARD_SOURCE\": number,    //資料來源\n  \"IMPORT_TYPE\":string,     //資料匯入方式\n  \"WF_NO\":string,           //WORKFLOW 表單編號\n  \"WF_RESULT\": number,      //表單狀態\n  \"WF_SIGN_TIME\":date,      //簽核完成時間\n  \"C_DATETIME\":date,        //新增_日期\n  \"E_DATETIME\":date,        //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/over_attend",
+    "method": "POST",
+    "summary": "取得超時出勤原因代碼",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nover_attend = {\n  \"OVER_ATTEND_ID\": number,//超時出勤原因_ID\n  \"CO_ID\": number,//公司_ID\n  \"OVER_ATTEND_CODE\": string,//超時出勤代碼\n  \"OVER_ATTEND_NAME\": string,//超時出勤原因\n  \"OVER_ATTEND_NAME_JSON\": boject,//超時出勤原因_JSON\n  \"IS_ACT\": number,//使用狀態\n  \"SORT_ORDER\": number,//排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_biz_main",
+    "method": "POST",
+    "summary": "取得員工出差主檔資料",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nempBiz = {\n  \"EMP_BIZ_ID\": number,       //員工出差資料檔_ID\n  \"CO_ID\": number,            //公司_ID\n  \"EMP_ID\": number,           //員工_ID\n  \"EMP_NO\": string,           //員工編號\n  \"BIZ_TYPE\": number,         //出差單類型 1:基礎  2:進階\n  \"BIZ_PROPERTY_ID\": number,  //出差性質_ID\n  \"AGENT_ID\": number,         //職務代理人_ID\n  \"BIZ_START\": date,          //出差起始時間\n  \"BIZ_END\": date,            //出差結束時間\n  \"BIZ_VALUE\": number,        //合計出差時數\n  \"UNIT\": string,             //出差時數單位\n  \"REQUEST_TYPE\": number,     //申請類型 1:單點出差  2:多停點出差\n  \"BIZ_TRANS_IDS\": string,    //交通工具_IDS\n  \"BIZ_TODO_IDS\": string,     //委辦事項_IDS\n  \"FILES\": array,             //附件\n  \"BIZ_SOURCE\": number,       //資料來源 1:資料輸入 2:資料匯入 6:電子表單 7:介接\n  \"WF_NO\":string,             //WORKFLOW 表單編號\n  \"WF_RESULT\": number,        //表單狀態 1:在途中 2:已核准\n  \"WF_SIGN_TIME\": date,       //簽核完成時間\n  \"E_EMP_ID\": number,         //修改_員工_ID        \n  \"E_EMP_NO\": string,         //修改_員工編號\n  \"C_DATETIME\": date,         //新增_日期\n  \"E_DATETIME\": date,         //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/emp_biz",
+    "method": "POST",
+    "summary": "取得員工出差資料",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nempBiz = {\n  \"EMP_BIZ_ID\": number,       //員工出差資料檔_ID\n  \"EMP_BIZ_TRIP_ID\": number,  //員工出差行程明細檔_ID\n  \"CO_ID\": number,            //公司_ID\n  \"EMP_ID\": number,           //員工_ID\n  \"EMP_NO\": string,           //員工編號\n  \"BIZ_TYPE\": number,         //出差單類型 1:基礎  2:進階\n  \"BIZ_PROPERTY_ID\": number,  //出差性質_ID\n  \"AGENT_ID\": number,         //職務代理人_ID\n  \"BIZ_START\": date,          //出差起始時間\n  \"BIZ_END\": date,            //出差結束時間\n  \"BIZ_VALUE\": number,        //合計出差時數\n  \"UNIT\": string,             //出差時數單位\n  \"REQUEST_TYPE\": number,     //申請類型 1:單點出差  2:多停點出差\n  \"BIZ_AREA_ID\": number,      //出差地點_ID\n  \"BIZ_TRANS_IDS\": string,    //交通工具_IDS\n  \"BIZ_TODO_IDS\": string,     //委辦事項_IDS\n  \"REASON\": string,           //出差原因\n  \"FILES\": array,             //附件\n  \"BIZ_SOURCE\": number,       //資料來源 1:資料輸入 2:資料匯入 6:電子表單 7:介接\n  \"WF_NO\":string,             //WORKFLOW 表單編號\n  \"WF_RESULT\": number,        //表單狀態 1:在途中 2:已核准\n  \"WF_SIGN_TIME\": date,       //簽核完成時間\n  \"IS_ALL_CANCEL\": number,    //是否完全銷假 0:否  1:是\n  \"E_EMP_ID\": number,         //修改_員工_ID        \n  \"E_EMP_NO\": string,         //修改_員工編號\n  \"C_DATETIME\": date,         //新增_日期\n  \"E_DATETIME\": date,         //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/am/biz_area",
+    "method": "POST",
+    "summary": "取得出差地點代碼",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nbizArea = {\n  \"BIZ_AREA_ID\": number,       //出差地點_ID\n  \"CO_ID\": number,             //公司_ID\n  \"AREA_CODE\": string,         //出差地點代碼\n  \"AREA_NAME\": string,         //出差地點名稱\n  \"AREA_NAME_JSON\": boject,    //出差地點名稱_JSON\n  \"IS_ACT\": number,            //使用狀態\n  \"SORT_ORDER\": number,        //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/biz_property",
+    "method": "POST",
+    "summary": "取得出差性質代碼",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nbizProperty = {\n  \"BIZ_PROPERTY_ID\": number,       //出差性質_ID\n  \"CO_ID\": number,                 //公司_ID\n  \"PROPERTY_CODE\": string,         //出差性質代碼\n  \"PROPERTY_NAME\": string,         //出差性質名稱\n  \"PROPERTY_NAME_JSON\": boject,    //出差性質名稱_JSON\n  \"IS_ACT\": number,                //使用狀態\n  \"SORT_ORDER\": number,            //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/biz_todo",
+    "method": "POST",
+    "summary": "取得委辦事項代碼",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nbizTodo = {\n  \"BIZ_TODO_ID\": number,           //委辦事項_ID\n  \"CO_ID\": number,                 //公司_ID\n  \"TODO_CODE\": string,             //委辦事項代碼\n  \"TODO_NAME\": string,             //委辦事項名稱\n  \"TODO_NAME_JSON\": boject,        //委辦事項名稱_JSON\n  \"IS_ACT\": number,                //使用狀態\n  \"SORT_ORDER\": number,            //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/biz_trans",
+    "method": "POST",
+    "summary": "取得交通工具代碼",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nbizTrans = {\n  \"BIZ_TRANS_ID\": number,          //交通工具_ID\n  \"CO_ID\": number,                 //公司_ID\n  \"TRANS_CODE\": string,            //交通工具代碼\n  \"TRANS_NAME\": string,            //交通工具名稱\n  \"TRANS_NAME_JSON\": boject,       //交通工具名稱_JSON\n  \"IS_ACT\": number,                //使用狀態\n  \"SORT_ORDER\": number,            //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/am/section/import",
+    "method": "POST",
+    "summary": "匯入時段排班班表上傳",
+    "tags": [
+      "AM"
+    ],
+    "description": "使用說明： 依 Max 時段排班範本格式產生 excel 後，打這個 API"
+  },
+  {
+    "path": "/api/am/clock/insert",
+    "method": "POST",
+    "summary": "打卡資料寫入",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\ncode,  //回傳訊息代號\nmsg: string,   //回傳訊息\n```\n"
+  },
+  {
+    "path": "/api/am/clock/format",
+    "method": "POST",
+    "summary": "取得打卡匯入範本",
+    "tags": [
+      "AM"
+    ],
+    "description": "```\nsalary_item = {\n  \"CO_ID\": number,            //公司_ID\n  \"CLOCK_FORMAT_ID\": number,  //刷卡鐘代號_ID\n  \"FORMAT_NAME\": string,      //格式名稱\n  \"FORMAT_TYPE\": string,      //資料接收格式 1:純文字檔(.txt,.csv,.dat) 2:Office Excel(.xls,.xlsx)\n},\n```\n"
+  },
+  {
+    "path": "/api/am/clock/import",
+    "method": "POST",
+    "summary": "批次打卡資料寫入",
+    "tags": [
+      "AM"
+    ],
+    "description": "回傳格式：\n```\n// responses\n{\n  \"code\": number  \n  \"data\": {\n    \"success\": number,  //成功筆數\n    \"fail\": number,     //失敗筆數\n    \"errorData\": [row, row...]   //失敗資料 \n  }\n}\n// 解析資料結果範例  錯誤為object\nrow = {\n  \"rowIndex\": number,    //資料行數\n  \"year\": 2023,          //年\n  \"month\": 8,            //月\n  \"day\": 2,              //日\n  \"hour\": 8,             //時\n  \"min\": 8,              //分\n  \"sec\": 0,              //秒\n  \"date\": \"2023/08/02\",  //日期\n  \"time\": \"08:08:00\",    //時間\n  \"clock\": \"002\",        //卡鐘\n  \"empNo\": {             //員工編號\n    \"key\": \"empNo\",\n    \"value\": \"D001\",\n    \"invalid\": \"無此員工編號\"\n  },\n}\n// 錯誤 object\nerr = {\n  \"key\": string,      //錯誤項目\n  \"value\": string,    //取得值\n  \"invalid\": string   //錯誤訊息\n}\n```\n"
+  },
+  {
+    "path": "/api/auth/signIn",
+    "method": "POST",
+    "summary": "登入系統",
+    "tags": [
+      "Auth"
+    ],
+    "description": "```\n```\n"
+  },
+  {
+    "path": "/api/auth/signOut",
+    "method": "POST",
+    "summary": "登出系統",
+    "tags": [
+      "Auth"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/auth/token/refresh",
+    "method": "POST",
+    "summary": "更新 access token",
+    "tags": [
+      "Auth"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/file/attach",
+    "method": "POST",
+    "summary": "附件上傳",
+    "tags": [
+      "FILE"
+    ],
+    "description": "使用說明，以表單申請要加入附件舉例：\n- step1. 打這個 API 取得回傳物件\n- step2. 把回傳物件 push 進表單申請的 attachments 陣列\n回傳格式：\n```\n{\n  \"fileUUID\": \"30381c3458faf2d31c38aed42e7c6e17\",\n  \"fileName\": \"1.png\",\n  \"fileSize\": 74506,\n  \"fileMime\": \"image/png\",\n  \"isTmp\": 1\n}\n```\n"
+  },
+  {
+    "path": "/api/file/detach",
+    "method": "POST",
+    "summary": "刪除已上傳的附件",
+    "tags": [
+      "FILE"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/file/download",
+    "method": "POST",
+    "summary": "下載附件",
+    "tags": [
+      "FILE"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/ed/grade",
+    "method": "POST",
+    "summary": "職等資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\ngrade = {\n  \"GRADE_ID\": number,         //職等_ID\n  \"CO_ID\": number,            //公司_ID\n  \"GRADE_CODE\": string,       //職等代碼\n  \"GRADE_NAME\": string,       //職等名稱\n  \"GRADE_NAME_JSON\": boject,  //職等名稱_JSON\n  \"IS_ACT\": number,           //使用狀態\n  \"SORT_ORDER\": number,       //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/level",
+    "method": "POST",
+    "summary": "職級資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nlevel = {\n  \"LEVEL_ID\": number,         //職級_ID\n  \"CO_ID\": number,            //公司_ID\n  \"GRADE_ID\": number,         //職等_ID\n  \"GRADE_CODE\": string,       //職等代碼\n  \"GRADE_NAME\": string,       //職等名稱\n  \"GRADE_NAME_JSON\": boject,  //職等名稱_JSON\n  \"LEVEL_CODE\": string,       //職級代碼\n  \"LEVEL_NAME\": string,       //職級名稱\n  \"LEVEL_NAME_JSON\": boject,  //職級名稱_JSON\n  \"IS_ACT\": number,           //使用狀態\n  \"SORT_ORDER\": number,       //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/job",
+    "method": "POST",
+    "summary": "職位資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\njob = {\n  \"JOB_ID\": number,         //職位_ID\n  \"CO_ID\": number,          //公司_ID\n  \"JOB_CODE\": string,       //職位代碼\n  \"JOB_NAME\": string,       //職位名稱\n  \"JOB_NAME_JSON\": boject,  //職位名稱_JSON\n  \"IS_ACT\": number,         //使用狀態\n  \"SORT_ORDER\": number,     //排序\n  \"E_EMP_ID\": number,       //修改_員工_ID        \n  \"E_EMP_NO\": string,       //修改_員工編號\n  \"E_DATETIME\": date,       //修改_日期   \n},\n```\n"
+  },
+  {
+    "path": "/api/ed/job_cat",
+    "method": "POST",
+    "summary": "職務類別資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\njob_cat = {\n  \"JOB_CAT_ID\": number,         //職務類別_ID\n  \"CO_ID\": number,              //公司_ID\n  \"JOB_CAT_CODE\": string,       //職務類別代碼\n  \"JOB_CAT_NAME\": string,       //職務類別名稱\n  \"JOB_CAT_NAME_JSON\": boject,  //職務類別名稱_JSON\n  \"IS_ACT\": number,             //使用狀態\n  \"SORT_ORDER\": number,         //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/job_style",
+    "method": "POST",
+    "summary": "職種資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\njob_style = {\n  \"JOB_STYLE_ID\": number,         //職種_ID\n  \"CO_ID\": number,                //公司_ID\n  \"JOB_STYLE_CODE\": string,       //職種代碼\n  \"JOB_STYLE_NAME\": string,       //職種名稱\n  \"JOB_STYLE_NAME_JSON\": boject,  //職種名稱_JSON\n  \"IS_ACT\": number,               //使用狀態\n  \"SORT_ORDER\": number,           //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/job_desc",
+    "method": "POST",
+    "summary": "職務說明書資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\njob_desc = {\n  \"JOB_DESC_ID\": number,        //職務說明書_ID\n  \"CO_ID\": number,              //公司_ID\n  \"JOB_DESC_CODE\": string,      //職務說明書代碼\n  \"JOB_DESC_NAME\": string,      //職務說明書名稱\n  \"JOB_DESC_NAME_JSON\": boject, //職務說明書名稱_JSON\n  \"IS_ACT\": number,             //使用狀態\n  \"SORT_ORDER\": number,         //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/job_biz",
+    "method": "POST",
+    "summary": "名片職務資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\njob_biz = {\n  \"JOB_BIZ_ID\": number,        //名片職務_ID\n  \"CO_ID\": number,             //公司_ID\n  \"JOB_BIZ_CODE\": string,      //名片職務代碼\n  \"JOB_BIZ_NAME\": string,      //名片職務名稱\n  \"JOB_BIZ_NAME_JSON\": boject, //名片職務名稱_JSON\n  \"IS_ACT\": number,            //使用狀態\n  \"SORT_ORDER\": number,        //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/identity",
+    "method": "POST",
+    "summary": "身分類別資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nidentity = {\n  \"IDENTITY_ID\": number,          //身分類別_ID\n  \"CO_ID\": number,                //公司_ID\n  \"IDENTITY_CODE\": string,        //身分類別代碼\n  \"IDENTITY_NAME\": string,        //身分類別名稱\n  \"IDENTITY_NAME_JSON\": boject,   //身分類別名稱_JSON\n  \"IS_ACT\": number,               //使用狀態\n  \"SORT_ORDER\": number,           //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/area",
+    "method": "POST",
+    "summary": "工作區域資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\narea = {\n  \"AREA_ID\": number,        //工作區域_ID\n  \"CO_ID\": number,          //公司_ID\n  \"AREA_CODE\": string,      //工作區域代碼\n  \"AREA_NAME\": string,      //工作區域名稱\n  \"AREA_NAME_JSON\": boject, //工作區域名稱_JSON\n  \"IS_ACT\": number,         //使用狀態\n  \"SORT_ORDER\": number,     //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/site",
+    "method": "POST",
+    "summary": "工作地點資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nsite = {\n  \"SITE_ID\": number,        //工作地點_ID\n  \"CO_ID\": number,          //公司_ID\n  \"AREA_ID\": number,        //工作區域_ID\n  \"AREA_CODE\": string,      //工作區域代碼\n  \"AREA_NAME\": string,      //工作區域名稱\n  \"AREA_NAME_JSON\": boject, //工作區域名稱_JSON\n  \"SITE_CODE\": string,      //工作地點代碼\n  \"SITE_NAME\": string,      //工作地點名稱\n  \"SITE_NAME_JSON\": boject, //工作地點名稱_JSON\n  \"IS_ACT\": number,         //使用狀態\n  \"SORT_ORDER\": number,     //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/factory",
+    "method": "POST",
+    "summary": "廠別資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nfactory = {\n  \"FACTORY_ID\": number,        //廠別_ID\n  \"CO_ID\": number,             //公司_ID\n  \"FACTORY_CODE\": string,      //廠別代碼\n  \"FACTORY_NAME\": string,      //廠別名稱\n  \"FACTORY_NAME_JSON\": boject, //廠別名稱_JSON\n  \"IS_ACT\": number,            //使用狀態\n  \"SORT_ORDER\": number,        //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/vars_cause",
+    "method": "POST",
+    "summary": "異動原因資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nvars_cause = {\n  \"VARS_CAUSE_ID\": number,     //異動原因_ID\n  \"CO_ID\": number,             //公司_ID\n  \"CAUSE_CODE\": string,        //異動原因代碼\n  \"CAUSE_NAME\": string,        //異動原因名稱\n  \"CAUSE_NAME_JSON\": boject,   //異動原因名稱_JSON\n  \"IS_ACT\": number,            //使用狀態\n  \"SORT_ORDER\": number,        //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/quit_cause",
+    "method": "POST",
+    "summary": "留停離職原因資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nvars_cause = {\n  \"QUIT_CAUSE_ID\": number,     //留停離職原因_ID\n  \"CO_ID\": number,             //公司_ID\n  \"CAUSE_CODE\": string,        //留停離職原因代碼\n  \"CAUSE_NAME\": string,        //留停離職原因名稱\n  \"CAUSE_NAME_JSON\": boject,   //留停離職原因名稱_JSON\n  \"IS_ACT\": number,            //使用狀態\n  \"SORT_ORDER\": number,        //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/course_type",
+    "method": "POST",
+    "summary": "訓練課程分類資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nvars_cause = {\n  \"COURSE_TYPE_ID\": number,          //訓練課程分類_ID\n  \"CO_ID\": number,                   //公司_ID\n  \"COURSE_TYPE_CODE\": string,        //訓練課程分類代碼\n  \"COURSE_TYPE_NAME\": string,        //訓練課程分類名稱\n  \"COURSE_TYPE_NAME_JSON\": boject,   //訓練課程分類名稱_JSON\n  \"IS_ACT\": number,                  //使用狀態\n  \"SORT_ORDER\": number,              //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/reward",
+    "method": "POST",
+    "summary": "獎懲項目資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nreward = {\n  \"REWARD_ID\": number,          //獎懲項目_ID\n  \"CO_ID\": number,              //公司_ID\n  \"REWARD_CODE\": string,        //獎懲項目代碼\n  \"REWARD_NAME\": string,        //獎懲項目名稱\n  \"REWARD_NAME_JSON\": boject,   //獎懲項目名稱_JSON\n  \"REWARD_TYPE\": string,        //獎懲類別名稱\n  \"REWARD_VALUE\": number,       //獎懲點數\n  \"IS_ACT\": number,             //使用狀態\n  \"SORT_ORDER\": number,         //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/perf_type",
+    "method": "POST",
+    "summary": "績效種類資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nperf_type = {\n  \"PERF_TYPE_ID\": number,          //績效種類_ID\n  \"CO_ID\": number,                 //公司_ID\n  \"PERF_TYPE_CODE\": string,        //績效種類代碼\n  \"PERF_TYPE_NAME\": string,        //績效種類名稱\n  \"PERF_TYPE_NAME_JSON\": boject,   //績效種類名稱_JSON\n  \"IS_ACT\": number,                //使用狀態\n  \"SORT_ORDER\": number,            //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/perf_rating",
+    "method": "POST",
+    "summary": "績效評核等級資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nperf_rating = {\n  \"PERF_RATING_ID\": number,          //評等等級_ID\n  \"CO_ID\": number,                   //公司_ID\n  \"RATING_RULE_CODE\": string,        //評核等級規則代碼\n  \"RATING_RULE_NAME\": string,        //評核等級規則名稱\n  \"RATING_RULE_NAME_JSON\": boject,   //評核等級規則名稱_JSON\n  \"PERF_RATING_CODE\": string,        //評等等級代碼\n  \"PERF_RATING_NAME\": string,        //評等等級名稱\n  \"PERF_RATING_NAME_JSON\": boject,   //評等等級名稱_JSON\n  \"IS_ACT\": number,                  //使用狀態\n  \"SORT_ORDER\": number,              //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp",
+    "method": "POST",
+    "summary": "員工基本資料資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp = {\n  \"EMP_ID\": number,                   //員工_ID\n  \"CO_ID\": number,                    //公司_ID\n  \"CO_CODE\": string,                  //公司代號\n  \"CO_NAME\": string,                  //公司名稱\n  \"CO_NAME_JSON\": string,             //公司名稱_JSON\n  \"EMP_NO\": string,                   //員工編號\n  \"EMP_NAME\": string,                 //員工姓名\n  \"EMP_EN_NAME\": string,              //英文姓名\n  \"EMP_ALIAS_NAME\": string,           //別名\n  \"NATIONALITY\": string,              //國籍\n  \"NATIONALITY_NAME\": string,         //國籍名稱\n  \"LIVE_AREA\": string,                //出生地\n  \"IDC_NO\": string,                   //身分證號\n  \"GENDER\": number,                   //性別\n  \"GENDER_NAME\": string,              //性別名稱\n  \"BIRTHDAY\": date,                   //生日\n  \"CONSTELLATION\": number,            //星座\n  \"CONSTELLATION_NAME\": string,       //星座名稱\n  \"BLOOD_TYPE\": string,               //血型\n  \"BLOOD_TYPE_NAME\": string,          //血型名稱\n  \"MARITAL_STATUS\": number,           //婚姻狀況\n  \"MARITAL_STATUS_NAME\": string,      //婚姻狀況名稱\n  \"MILITARY_STATUS\": number,          //兵役狀況\n  \"MILITARY_STATUS_NAME\": string,     //兵役狀況名稱\n  \"VETERANS_ date\": date,             //退伍日期\n  \"HEIGHT\": number,                   //身高\n  \"WEIGHT\": number,                   //體重\n  \"ETHNIC_IDENTITY\": number,          //族群身分\n  \"ETHNIC_IDENTITY_NAME\": string,     //族群身分名稱\n  \"IS_CRIMINAL_REC\": number,          //有無前科\n  \"IS_CRIMINAL_REC_NAME\": number,     //有無前科名稱\n  \"WORK_SRC_NAME\": string,            //就職來源名稱\n  \"CRIPPLES_LEVEL1\": number,          //身障程度1\n  \"CRIPPLES_LEVEL1_NAME\": string,     //身障程度1名稱\n  \"CRIPPLES_CLASS1\": number,          //殘障類別1\n  \"CRIPPLES_CLASS1_NAME\": string,     //殘障類別1名稱\n  \"CRIPPLES_LEVEL2\": number,          //身障程度2\n  \"CRIPPLES_LEVEL2_NAME\": string,     //身障程度2名稱\n  \"CRIPPLES_CLASS2\": number,          //殘障類別2\n  \"CRIPPLES_CLASS2_NAME\": string,     //殘障類別2名稱\n  \"CRIPPLES_LEVEL3\": number,          //身障程度3\n  \"CRIPPLES_LEVEL3_NAME\": string,     //身障程度3名稱\n  \"CRIPPLES_CLASS3\": number,          //殘障類別3\n  \"CRIPPLES_CLASS3_NAME\": string,     //殘障類別3名稱\n  \"ALIEN_IDC_NO\": string,             //外僑統一證號\n  \"AGENT_CODE\": string,               //仲介單位代碼\n  \"AGENT_NAME\": string,               //仲介單位名稱\n  \"PASSPORT_NO\": string,              //護照號碼\n  \"PASSPORT_NAME\": string,            //護照姓名\n  \"ENTER_ date\": date,                //入境日期\n  \"OUTBOUND_ date\": date,             //出境日期\n  \"DUE_ date\": date,                  //居留證到期日\n  \"OFFICE_TEL\": string,               //公司電話\n  \"OFFICE_TEL_EXT\": string,           //公司電話-分機\n  \"HOME_TEL\": string,                 //住家電話\n  \"LIVE_TEL\": string,                 //戶籍電話\n  \"MOBILE_TEL\": string,               //行動電話\n  \"OFFICE_EMAIL\": string,             //公司e-mail\n  \"PERSONAL_EMAIL\": string,           //個人 e-mail\n  \"LIVE_POSTAL_CODE\": string,         //戶籍郵遞區號\n  \"LIVE_POSTAL_CODE_NAME\": string,    //戶籍郵遞區號名稱\n  \"LIVE_ADDRESS\": string,             //戶籍地址\n  \"LIVE_ADDRESS_TW\": string,          //完整戶籍地址\n  \"CONTACT_POSTAL_CODE\": string,      //通訊郵遞區號\n  \"CONTACT_POSTAL_CODE_NAME\": string, //通訊郵遞區號名稱\n  \"CONTACT_ADDRESS\": string,          //通訊地址\n  \"CONTACT_ADDRESS_TW\": string,       //完整通訊地址\n  \"CONTACT_ADDRESS_EN\": string,       //國外地址\n  \"SOCIAL_ACCOUNT1\": string,          //社群帳號(1)\n  \"SOCIAL_ACCOUNT2\": string,          //社群帳號(2)\n  \"URGENCY_CONTACT1\": string,         //緊急聯絡人(1)\n  \"URGENCY_RELATION1\": string,        //緊急聯絡人關係(1)\n  \"URGENCY_RELATION1_NAME\": string,   //緊急聯絡人關係(1)名稱\n  \"URGENCY_TEL1\": string,             //電話(1)\n  \"URGENCY_MOBILE1\": string,          //行動電話(1)\n  \"URGENCY_CONTACT2\": string,         //緊急聯絡人(2)\n  \"URGENCY_RELATION2\": string,        //緊急聯絡人關係(2)\n  \"URGENCY_RELATION2_NAME\": string,   //緊急聯絡人關係(2)名稱\n  \"URGENCY_TEL2\": string,             //電話(2)\n  \"URGENCY_MOBILE2\": string,          //行動電話(2)\n  \"SNO_ID\": number,                   //公司扣繳統編_ID\n  \"TAXID_NO\": string,                 //公司扣繳統編\n  \"SNO_NAME\": string,                 //公司扣繳統編名稱\n  \"DEPT1_ID\": number,                 //部門1_ID\n  \"DEPT1_CODE\": string,               //部門1\n  \"DEPT1_NAME\": string,               //部門1名稱\n  \"DEPT2_ID\": number,                 //部門2_ID\n  \"DEPT2_CODE\": string,               //部門2\n  \"DEPT2_NAME\": string,               //部門2名稱\n  \"DEPT3_ID\": number,                 //部門3_ID\n  \"DEPT3_CODE\": string,               //部門3\n  \"DEPT3_NAME\": string,               //部門3名稱\n  \"DEPT4_ID\": number,                 //部門4_ID\n  \"DEPT4_CODE\": string,               //部門4\n  \"DEPT4_NAME\": string,               //部門4名稱\n  \"DEPT5_ID\": number,                 //部門5_ID\n  \"DEPT5_CODE\": string,               //部門5\n  \"DEPT5_NAME\": string,               //部門5名稱\n  \"JOB_ID\": number,                   //職位\n  \"JOB_CODE\": string,                 //職位\n  \"JOB_NAME\": string,                 //職位名稱\n  \"GRADE_ID\": number,                 //職等_ID\n  \"GRADE_CODE\": string,               //職等\n  \"GRADE_NAME\": string,               //職等名稱\n  \"LEVEL_ID\": number,                 //職級_ID\n  \"LEVEL_CODE\": string,               //職級\n  \"LEVEL_NAME\": string,               //職級名稱\n  \"JOB_CAT_ID\": number,               //職務類別_ID\n  \"JOB_CAT_CODE\": string,             //職務類別\n  \"JOB_CAT_NAME\": string,             //職務類別名稱\n  \"JOB_STYLE_ID\": number,             //職種_ID\n  \"JOB_STYLE_CODE\": string,           //職種\n  \"JOB_STYLE_NAME\": string,           //職種名稱\n  \"JOB_DESC_ID\": number,              //適用職務說明書\n  \"JOB_DESC_CODE\": string,            //適用職務說明書\n  \"JOB_DESC_NAME\": string,            //適用職務說明書名稱\n  \"JOB_BIZ_ID\": number,               //名片職務\n  \"JOB_BIZ_CODE\": string,             //名片職務\n  \"JOB_BIZ_NAME\": string,             //名片職務名稱\n  \"IDENTITY_ID\": number,              //身份類別\n  \"IDENTITY_CODE\": string,            //身份類別\n  \"IDENTITY_NAME\": string,            //身份類別名稱\n  \"EMPLOYEE_TYPE\": number,            //直/間接員工\n  \"EMPLOYEE_TYPE_NAME\": string,       //直/間接員工名稱\n  \"RESPOBILITY\": number,              //責任區分\n  \"RESPOBILITY_NAME\": string,         //責任區分名稱\n  \"HEADCOUNT_STATUS\": number,         //編制狀態\n  \"HEADCOUNT_STATUS_NAME\": string,    //編制狀態名稱\n  \"AREA_ID\": number,                  //工作區域\n  \"AREA_CODE\": string,                //工作區域\n  \"AREA_NAME\": string,                //工作區域名稱\n  \"SITE_ID\": number,                  //工作地點\n  \"SITE_CODE\": string,                //工作地點\n  \"SITE_NAME\": string,                //工作地點名稱\n  \"FACTORY_ID\": string,               //廠別\n  \"FACTORY_CODE\": string,             //廠別\n  \"FACTORY_NAME\": string,             //廠別名稱\n  \"IS_PASS_PROBATION\": number,        //是否已試用期滿\n  \"PP_DAY\": number,                   //試用期天數\n  \"PP_DATE\": date,                    //試用期滿日期\n  \"PP_DESC\": string,                  //試用期說明\n  \"WORK_STATUS\": number,              //在職狀況\n  \"WORK_STATUS_NAME\": string,         //在職狀況名稱\n  \"HIRE_DATE\": date,                  //到職日期\n  \"ORG_HIRE_DATE\": date,              //到企業集團日\n  \"ORG_QUIT_DATE\": date,              //轉出集團日\n  \"QUIT_DATE\": date,                  //最後離職日期\n  \"QUIT_RETURN_DATE\": date,           //最後離職復職日期\n  \"STOP_DATE\": date,                  //最後留職停薪日期\n  \"STOP_RETURN_DATE\": date,           //最後留停復職日期\n  \"WORK_YEAR_START\": date,            //工作年資起始日\n  \"RETIRE_YEAR_START\": date,          //退休年資起始日\n  \"CARDNO\": string,                   //員工生效卡號\n  \"PORTAL_USER_ID\": number,           //員工Portal_ID        \n  \"PORTAL_USER_ACCOUNT\": string,      //員工Portal帳號  \n  \"PORTAL_USER_NAME\": string,         //員工Portal名稱                \n  \"C_DATETIME\": date,                 //新增_日期\n  \"E_EMP_ID\": number,                 //修改_員工_ID          \n  \"E_EMP_NO\": date,                   //修改_員工編號        \n  \"E_DATETIME\": date,                 //修改_日期\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_photo",
+    "method": "POST",
+    "summary": "員工照片檔資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp_photo = {\n  \"EMP_ID\": number,   //員工_ID\n  \"PHOTO\": string,    //員工照片\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_training",
+    "method": "POST",
+    "summary": "員工訓練資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp_training = {\n  \"EMP_TRAINING_ID\": number,        //員工訓練_ID\n  \"EMP_ID\": number,                 //員工_ID\n  \"COURSE_NAME\": string,            //課程名稱\n  \"TRAINING_TYPE\": number,          //訓練種類\n  \"COURSE_TYPE_ID\": number,         //課程分類\n  \"COURSE_TYPE_CODE\": string,       //課程分類代碼\n  \"COURSE_TYPE_NAME\": string,       //課程分類名稱\n  \"COURSE_TYPE_NAME_JSON\": boject,  //課程分類名稱_JSON\n  \"COURSE_REQUIRE\": number,         //課程需求\n  \"COURSE_EXEC\": number,            //上課方式\n  \"ORGANIZER\": string,              //主辦單位\n  \"LOCATION\": string,               //訓練地點\n  \"TRAINER\": string,                //講師姓名\n  \"COURSE_START\": date,             //上課時間起\n  \"COURSE_END\": date,               //上課時間迄\n  \"COURSE_HOUR\": number,            //課程時數\n  \"TEST_SCORE\": number,             //測驗分數\n  \"TEST_RESULT\": number,            //測驗結果\n  \"TEST_REASON\": string,            //不合格原因\n  \"CO_FEE_CUR\": string,             //費用分攤(公司)-幣別\n  \"CO_FEE\": number,                 //費用分攤(公司)-金額\n  \"EMP_FEE_CUR\": string,            //費用分攤(員工)-幣別\n  \"EMP_FEE\": number,                //費用分攤(員工)-金額\n  \"WORK_CONTRACT_YEAR\": number,     //工作簽約期限-年\n  \"WORK_CONTRACT_MONTH\": number,    //工作簽約期限-月\n  \"WORK_CONTRACT_DATE\": number,     //工作簽約到期日\n  \"TRAINING_NOTE\": string,          //備註\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_perf",
+    "method": "POST",
+    "summary": "員工績效資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp_perf = {\n  \"EMP_PERF_ID\": number,            //員工績效_ID\n  \"EMP_ID\": number,                 //員工_ID\n  \"PERF_YEAR\": number,              //考核年度\n  \"PERF_TYPE_ID\": number,           //考核種類\n  \"PERF_NAME\": string,              //績效管理名稱\n  \"PERF_START_DATE\": date,          //績效管理起日\n  \"PERF_END_DATE\": date,            //績效管理迄日\n  \"PERF_SCORE\": string,             //評核分數\n  \"PERF_RATING_ID\": number,         //評核等級_ID\n  \"PERF_RATING_CODE\": string,       //評等等級代碼\n  \"PERF_RATING_NAME\": string,       //評等等級名稱\n  \"PERF_RATING_NAME_JSON\": boject,  //評等等級名稱_JSON\n  \"IS_PASS\": number,                //是否通過\n  \"PERF_COMMENT\": string,           //評語\n  \"PERF_NOTE\": string,              //備註\n  \"DATA_SOURCE\": number,            //資料來源\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_reward",
+    "method": "POST",
+    "summary": "員工獎懲資訊",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp_reward = {\n  \"EMP_REWARD_ID\": number,      //員工獎懲_ID\n  \"EMP_ID\": number,             //員工_ID\n  \"REWARD_DATE\": date,          //獎懲日期\n  \"REWARD_ID\": number,          //獎懲項目\n  \"REWARD_CODE\": string,        //獎懲項目代碼\n  \"REWARD_NAME\": string,        //獎懲項目名稱\n  \"REWARD_NAME_JSON\": boject,   //獎懲項目名稱_JSON\n  \"REWARD_VAL\": number,         //功過數量\n  \"REWARD_LIST\": string,        //獎懲文號\n  \"REWARD_DESC\": string,        //獎懲說明\n  \"REWARD_NOTE\": string,        //備註\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_rollback",
+    "method": "POST",
+    "summary": "員工時光回朔檔",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp_rollback = {\n  \"EMP_ID\": number,                 //員工_ID\n  \"EMP_NO\": string,                 //員工編號\n  \"START_DATE\": date,               //開始日\n  \"END_DATE\": date,                 //結束日\n  \"SNO_ID\": number,                 //公司扣繳統編_ID\n  \"TAXID_NO\": string,               //公司扣繳統編\n  \"SNO_NAME\": string,               //公司扣繳統編名稱\n  \"DEPT1_ID\": number,               //部門1_ID\n  \"DEPT1_CODE\": string,             //部門1\n  \"DEPT1_NAME\": string,             //部門1名稱\n  \"DEPT2_ID\": number,               //部門2_ID\n  \"DEPT2_CODE\": string,             //部門2\n  \"DEPT2_NAME\": string,             //部門2名稱\n  \"DEPT3_ID\": number,               //部門3_ID\n  \"DEPT3_CODE\": string,             //部門3\n  \"DEPT3_NAME\": string,             //部門3名稱\n  \"DEPT4_ID\": number,               //部門4_ID\n  \"DEPT4_CODE\": string,             //部門4\n  \"DEPT4_NAME\": string,             //部門4名稱\n  \"DEPT5_ID\": number,               //部門5_ID\n  \"DEPT5_CODE\": string,             //部門5\n  \"DEPT5_NAME\": string,             //部門5名稱\n  \"JOB_ID\": number,                 //職位\n  \"JOB_CODE\": string,               //職位代碼\n  \"JOB_NAME\": string,               //職位名稱\n  \"GRADE_ID\": number,               //職等\n  \"GRADE_CODE\": string,             //職等代碼\n  \"GRADE_NAME\": string,             //職等名稱\n  \"LEVEL_ID\": number,               //職級\n  \"LEVEL_CODE\": string,             //職級代碼\n  \"LEVEL_NAME\": string,             //職級名稱\n  \"JOB_CAT_ID\": number,             //職務類別\n  \"JOB_CAT_CODE\": string,           //職務類別\n  \"JOB_CAT_NAME\": string,           //職務類別名稱\n  \"JOB_STYLE_ID\": number,           //職種\n  \"JOB_STYLE_CODE\": string,         //職種\n  \"JOB_STYLE_NAME\": string,         //職種名稱\n  \"JOB_DESC_ID\": number,            //適用職務說明書\n  \"JOB_DESC_CODE\": string,          //適用職務說明書\n  \"JOB_DESC_NAME\": string,          //適用職務說明書名稱\n  \"JOB_BIZ_ID\": number,             //名片職務\n  \"JOB_BIZ_CODE\": string,           //名片職務\n  \"JOB_BIZ_NAME\": string,           //名片職務名稱\n  \"IDENTITY_ID\": number,            //身份類別\n  \"IDENTITY_CODE\": string,          //身份類別\n  \"IDENTITY_NAME\": string,          //身份類別名稱\n  \"EMPLOYEE_TYPE\": number,          //直/間接員工\n  \"EMPLOYEE_TYPE_NAME\": string,     //直/間接員工名稱\n  \"RESPOBILITY\": number,            //責任區分\n  \"RESPOBILITY_NAME\": string,       //責任區分名稱\n  \"HEADCOUNT_STATUS\": number,       //編制狀態\n  \"HEADCOUNT_STATUS_NAME\": string,  //編制狀態名稱\n  \"AREA_ID\": number,                //工作區域\n  \"AREA_CODE\": string,              //工作區域\n  \"AREA_NAME\": string,              //工作區域名稱\n  \"SITE_ID\": number,                //工作地點\n  \"SITE_CODE\": string,              //工作地點\n  \"SITE_NAME\": string,              //工作地點名稱\n  \"FACTORY_ID\": string,             //廠別\n  \"FACTORY_CODE\": string,           //廠別\n  \"FACTORY_NAME\": string,           //廠別名稱\n  \"WORK_STATUS\": number,            //在職狀況\n  \"WORK_STATUS_NAME\": string,       //在職狀況名稱\n},\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_id",
+    "method": "POST",
+    "summary": "員工ID",
+    "tags": [
+      "ED"
+    ],
+    "description": "回傳格式說明：\n```\n[\n  {\n    CO_CODE, // 公司代號\n    CO_ID,   // 公司 ID\n    EMP_NO,  // 員工編號\n    EMP_ID   // 員工 ID\n  },\n  ...\n]\n```\n"
+  },
+  {
+    "path": "/api/ed/emp_parttime",
+    "method": "POST",
+    "summary": "員工兼職資料",
+    "tags": [
+      "ED"
+    ],
+    "description": "```\nemp_parttime = {\n  \"EMP_PARTTIME_ID\": number,   //員工兼職資料_ID\n  \"EMP_ID\": number,            //員工_ID\n  \"EMP_NO\": string,            //員工編號\n  \"DATA_AREA\": number,         //資料區域\n  \"START_DATE\": date,          //任職日期\n  \"END_DATE\": date,            //卸離日期\n  \"CO_ID\": number,             //公司_ID\n  \"CO_CODE\": string,           //公司代碼\n  \"ORG_TYPE_CODE\": number,     //組織類別代碼\n  \"DEPT_ID\": number,           //部門_ID\n  \"DEPT_CODE\": string,         //部門代號\n  \"DEPT_NAME\": string,         //部門名稱\n  \"JOB_ID\": number,            //職位_ID\n  \"JOB_CODE\": string,          //職位代號\n  \"JOB_NAME\": string,          //職位名稱    \n  \"JOB_CAT_ID\": number,        //職務類別_ID\n  \"JOB_CAT_CODE\": string,      //職務類別代號\n  \"JOB_CAT_NAME\": string,      //職務類別名稱\n  \"GRADE_ID\": number,          //職等_ID\n  \"GRADE_CODE\": string,        //職等代號\n  \"GRADE_NAME\": string,        //職等名稱             \n  \"LEVEL_ID\": number,          //職級_ID\n  \"LEVEL_CODE\": string,        //職級代號\n  \"LEVEL_NAME\": string,        //職級名稱                 \n  \"NOTE\": string,              //備註\n},\n```\n"
+  },
+  {
+    "path": "/api/os/company",
+    "method": "POST",
+    "summary": "公司資訊",
+    "tags": [
+      "OS"
+    ],
+    "description": "```\ncompany = {\n  \"CO_ID\": number,          //公司_ID\n  \"CO_CODE\": string,        //公司代號\n  \"CO_NAME\": string,        //公司名稱\n  \"CO_NAME_JSON\": boject,   //公司名稱_JSON\n  \"SORT_ORDER\": number,     //排序\n  \"BUILD_DATE\": date,       //成立日期\n  \"DEF_LANG\": string,       //預設語系\n  \"TIME_ZONE\": string,      //時區\n  \"IS_ACT\": number,         //使用狀態  \n},\n```\n"
+  },
+  {
+    "path": "/api/os/dept",
+    "method": "POST",
+    "summary": "部門資訊",
+    "tags": [
+      "OS"
+    ],
+    "description": "```\ndept = {\n  \"DEPT_ID\": number,                //部門_ID\n  \"CO_ID\": number,                  //公司_ID\n  \"ORG_TYPE_CODE\": string,          //組織類別代碼\n  \"ORG_TYPE_NAME\": string,          //組織類別名稱\n  \"DEPT_CODE\": string,              //部門代碼\n  \"DEPT_NAME\": string,              //部門名稱\n  \"DEPT_NAME_JSON\": object,         //部門名稱_JSON\n  \"DEPT_ABBR  \": string,            //部門簡稱\n  \"DEPT_ABBR_JSON\": object,         //部門簡稱_JSON\n  \"DEPT_LEVEL_ID\": number,          //部門組織層級_ID\n  \"DEPT_LEVEL_NAME\": string,        //層級名稱\n  \"DEPT_LEVEL_NAME_JSON\": object,   //部門層級名稱_JSON\n  \"DEPT_LEVEL_SORT\": number,        ##部門層級_排序\n  \"LEADER_ID\": number,              //部門主管_ID\n  \"LEADER_EMP_NO\": string,          //部門主管_員工編號\n  \"LEADER_EMP_NAME\": string,        //部門主管_姓名\n  \"LEADER_STATUS\": number,          //部門主管兼職/代理\n  \"DEPUTY_LEADER_ID\": number,       //部門副主管_ID\n  \"DEPUTY_LEADER_EMP_NO\": string,   //部門副主管_員工編號\n  \"DEPUTY_LEADER_EMP_NAME\": string, //部門副主管_姓名\n  \"DEPUTY_LEADER_STATUS\": number,   //部門副主管_兼職/代理\n  \"POSTAL_CODE\": string,            //部門郵遞區號\n  \"ADDRESS\": string,                //部門地址\n  \"ADDRESS_TW\": string,             //中文地址\n  \"ADDRESS_EN\": string,             //英文地址\n  \"TEL\": string,                    //部門電話\n  \"FAX\": string,                    //部門傳真\n  \"NOTE\": string,                   //備註\n  \"IS_ACT\": number,                 //使用狀態\n  \"PARENT_DEPT_ID\": number,         //上層部門_ID\n  \"PARENT_DEPT_CODE\": string,       //上層部門_部門代號\n  \"PARENT_DEPT_NAME\": string,       //上層部門_部門名稱\n  \"DEPT_RELATION\": string,          //部門連結關係(向上的父部門)\n  \"DEPT_RELATION_R\": string,        //部門連結關係(反向：子部門)\n  \"DEPT_SORT\": number,              //組織樹狀排序位置\n  \"SORT_BY_LEVEL\": number,          //同一個層級排序位置\n  \"LEVNUM\": number,                 //組織圖排列層次  \n  \"DEPT_START_DATE\": date,          //部門起始日    \n  \"E_EMP_ID\": number,               //修改_員工_ID           \n  \"E_EMP_NO\": string,               //修改_員工編號\n  \"E_DATETIME\": date,               //修改_日期    \n}\n```\n"
+  },
+  {
+    "path": "/api/os/dept_level",
+    "method": "POST",
+    "summary": "部門層級資訊",
+    "tags": [
+      "OS"
+    ],
+    "description": "```\ndeptLevel = {\n  \"DEPT_LEVEL_ID\": number,       //組織層級_ID\n  \"CO_ID\": number,               //公司_ID\n  \"ORG_TYPE_CODE\": string,       //組織類別代碼\n  \"ORG_TYPE_NAME\": string,       //組織類別名稱\n  \"LEVEL_NAME\": string,          //層級名稱\n  \"LEVEL_NAME_JSON\": object,     //層級名稱_JSON\n  \"IS_ACT\": number,              //使用狀態\n  \"SORT_ORDER\": number,          //組織樹狀排序位置\n  \"E_EMP_ID\": number,            //修改_員工_ID        \n  \"E_EMP_NO\": string,            //修改_員工編號\n  \"E_DATETIME\": date,            //修改_日期  \n}\n```\n"
+  },
+  {
+    "path": "/api/os/company_sno",
+    "method": "POST",
+    "summary": "扣繳單位統編資訊",
+    "tags": [
+      "OS"
+    ],
+    "description": "```\ncompany_sno = {\n  \"SNO_ID\": number,         //公司扣繳統編_ID\n  \"CO_ID\": string,          //公司_ID\n  \"SNO_NAME\": string,       //公司扣繳統編名稱\n  \"SNO_NAME_JSON\": boject,  //公司扣繳統編名稱_JSON\n  \"TAXID_NO\": number,       //統一編號\n  \"IS_WELFARE\": date,       //是否為福委會\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/salaryItem",
+    "method": "POST",
+    "summary": "薪資科目檔資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nsalaryItem = {\n  \"CO_ID\": number,            //公司_ID\n  \"ITEM_CLASS\": number,       //加扣項別\n  \"DEFAULT_ITEM_CODE\":string, //對照系統科目代號\n  \"ITEM_CODE\":string,         //薪資科目代號\n  \"ITEM_NAME\":string,         //薪資科目名稱\n  \"ITEM_NAME_JSON\":boject,    //薪資科目名稱_JSON\n  \"IS_TAX\": number,           //是否應稅\n  \"TAX_FORMAT\":string,        //所得格式\n  \"TAX_TYPE\": number,         //課稅屬性\n  \"ENV_ITEM_NAME\":boject,     //薪資袋輸出名稱\n  \"IS_ACT\": number,           //是否啟用\n  \"SORT_ORDER\": number,       //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/salaryItem/default",
+    "method": "POST",
+    "summary": "薪資科目預設檔資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nsalaryItem_default = {\n  \"SALARY_ITEM_DEFAULT_ID\": number, //ID\n  \"ITEM_CLASS\":string,              //加扣項別\n  \"ITEM_CODE\":string,               //薪資科目代號\n  \"ITEM_NAME\":string,               //薪資科目名稱\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/rccc",
+    "method": "POST",
+    "summary": "成本中心代碼檔資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nrccc = {\n  \"RCCC_ID\": number,        //成本中心_ID\n  \"CO_ID\": number,          //公司_ID\n  \"RCCC_CODE\":string,       //成本中心代碼\n  \"RCCC_NAME\":string,       //成本中心名稱\n  \"RCCC_NAME_JSON\":string,  //成本中心名稱_JSON\n  \"IS_ACT\": number,         //使用狀態\n  \"SORT_ORDER\": number,     //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/emp_bank",
+    "method": "POST",
+    "summary": "員工薪資帳號資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nemp_bank = {\n  \"EMP_ID\": number,       //員工_ID\n  \"BANK_SEQ\": number,     //帳號\n  \"BANK_CODE\":string,     //銀行代碼\n  \"BANK_NAME\":string,     //銀行名稱\n  \"BRANCH_CODE\":string,   //分行代碼\n  \"BRANCH_NAME\":string,   //分行名稱\n  \"BANK_ACCOUNT\":string,  //銀行帳號\n  \"BANK_NOTE\":string,     //銀行備註\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/emp_basic",
+    "method": "POST",
+    "summary": "員工薪資基本資料資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nemp_basic = {\n  \"CO_ID\": number,              //公司_ID\n  \"EMP_ID\": number,             //員工_ID\n  \"SALARY_TYPE\":string,         //計薪方式\n  \"IS_HOLIDAY_PAY\": number,     //(日薪)假日是否給薪\n  \"LABOR_NO\":string,            //勞保投保編號\n  \"LABOR_NAME\":string,          //勞保投保單位名稱\n  \"LABOR_NAME_JSON\":object,     //勞保投保單位名稱_JSON\n  \"HEALTH_NO\":string,            //健保投保編號\n  \"HEALTH_NAME\":string,          //健保投保單位名稱\n  \"HEALTH_NAME_JSON\":object,     //健保投保單位名稱_JSON\n  \"LABOR_AMOUNT\": number,       //勞保月投保薪資\n  \"RISK_AMOUNT\": number,        //職災月投保薪資\n  \"HEALTH_AMOUNT\": number,      //健保投保薪資\n  \"RETIRE_AMOUNT\": number,      //勞退提繳工資\n  \"EMP_RATE\": number,           //員工提繳率\n  \"CO_RATE\": number,            //雇主提繳率\n  \"LABOR_NOW_STATUS\": number,   //勞保投保狀況\n  \"HEALTH_NOW_STATUS\": number,  //健保投保狀況\n  \"RETIRE_NOW_STATUS\": number,  //勞退投保狀況\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/emp_structure",
+    "method": "POST",
+    "summary": "員工薪資結構明細資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nemp_structure = {\n  \"CO_ID\": number,            //公司_ID\n  \"EMP_ID\": number,           //員工_ID\n  \"SALARY_ITEM_ID\": number,   //薪資科目_ID\n  \"ITEM_CLASS\": number,       //薪資科目加扣項別\n  \"ITEM_CODE\":string,         //薪資科目代號\n  \"ITEM_NAME\":string,         //薪資科目名稱\n  \"ITEM_NAME_JSON\":string,    //薪資科目名稱_JSON\n  \"ITEM_SALARY_TYPE\":string,  //薪資科目計薪方式\n  \"SALARY_AMOUNT\": number,    //薪資科目金額\n  \"CURRENCY\":string,          //幣別代碼\n  \"IS_PAY\": number,           //是否計薪\n  \"NOTE\":string,              //備註\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/emp_rccc",
+    "method": "POST",
+    "summary": "員工薪資異動_成本中心明細資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nemp_rccc = {\n  \"CO_ID\": number,      //公司_ID\n  \"EMP_ID\": number,     //員工_ID\n  \"RCCC_ID\": number,    //成本中心_ID\n  \"PERCENT\": number,    //分攤比例\n  \"SORT_ORDER\": number, //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/emp_salary",
+    "method": "POST",
+    "summary": "員工每月計薪結果-主檔資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nemp_salary = {\n  \"SALARY_CLOSE_ID\": number,  //薪資結檔主檔_ID\n  \"CLOSE_NAME\":string,        //結檔名稱\n  \"CO_ID\": number,            //公司_ID\n  \"EMP_ID\": number,           //員工_ID\n  \"SALARY_PAYCAT\": number,    //發放種類\n  \"JOB_MONTH\":date,           //計薪年月\n  \"PAY_DATE\":date,            //發放日期\n  \"TAX_MONTH\":date,           //所得年月\n  \"INC_AMOUNT\": number,       //加項總額\n  \"DEC_AMOUNT\": number,       //扣項總額\n  \"NET_AMOUNT\": number,       //實發金額\n  \"SNO_ID\": number,           //公司扣繳統編_ID\n  \"DEPT1_ID\": number,         //部門1_ID\n  \"DEPT2_ID\": number,         //部門2_ID\n  \"DEPT3_ID\": number,         //部門3_ID\n  \"DEPT4_ID\": number,         //部門4_ID\n  \"DEPT5_ID\": number,         //部門5_ID\n  \"JOB_ID\": number,           //職位\n  \"GRADE_ID\": number,         //職等\n  \"LEVEL_ID\": number,         //職級\n  \"IDENTITY_ID\": number,      //身份類別\n  \"EMPLOYEE_TYPE\": number,    //直/間接員工\n  \"RESPOBILITY\": number,      //責任區分\n  \"HEADCOUNT_STATUS\": number, //編制狀態\n  \"AREA_ID\": number,          //工作區域\n  \"SITE_ID\": number,          //工作地點\n  \"FACTORY_ID\": number,       //廠別\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/emp_salary/detail",
+    "method": "POST",
+    "summary": "員工每月計薪結果-明細資訊",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nemp_salary_detail = {\n  \"CO_ID\": number,              //公司_ID\n  \"EMP_ID\": number,             //員工_ID\n  \"SALARY_CLOSE_ID\": number,    //薪資結檔主檔_ID\n  \"SALARY_PAYCAT\": number,      //發放種類\n  \"CLOSE_NAME\":string,          //結檔名稱\n  \"PAY_DATE\":date,              //發放日期\n  \"JOB_MONTH\":date,             //計薪年月\n  \"TAX_MONTH\":date,             //所得年月\n  \"SALARY_ITEM_ID\": number,     //薪資科目_ID\n  \"SALARY_ITEM_AMOUNT\": number, //金額(台幣)\n  \"NOTE\":string,                //備註\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/salary_item/currency",
+    "method": "POST",
+    "summary": "取得加扣項幣別",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\ncurrency = {\n  \"CO_ID\": number,                //公司_ID\n  \"CURRENCY_CODE\": string,        //幣別代碼\n  \"CURRENCY_NAME\": string,        //幣別名稱\n  \"CURRENCY_NAME_JSON\": boject,   //幣別名稱_JSON\n  \"SORT_ORDER\": number,\t\t\t\t\t  //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/salary_item/list",
+    "method": "POST",
+    "summary": "取得加扣項薪資科目",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\nsalary_item = {\n  \"SALARY_ITEM_ID\": number,   //薪資科目_ID\n  \"CO_ID\": number,            //公司_ID\n  \"ITEM_CODE\":string,         //薪資科目代號\n  \"ITEM_NAME\":string,         //薪資科目名稱\n  \"ITEM_NAME_JSON\":boject,    //薪資科目名稱_JSON\n  \"SORT_ORDER\": number,       //排序\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/salary_item/check",
+    "method": "POST",
+    "summary": "加扣項檢查",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\ncheckSalary_item = {\n  \"Code\": number,        //訊息代號\n  \"Description\": string,   //訊息內容\n},\n```\n"
+  },
+  {
+    "path": "/api/pb/salary_item/insert",
+    "method": "POST",
+    "summary": "加扣項寫入",
+    "tags": [
+      "PB"
+    ],
+    "description": "```\ninsertSalary_item = {\n   \"INCDEC_EMP_ID\": number,         //寫入成功的加扣項主檔ID\n},\n```\n"
+  },
+  {
+    "path": "/api/sso/aad/redirect_url",
+    "method": "POST",
+    "summary": "取得SSO導向URL",
+    "tags": [
+      "SSO"
+    ],
+    "description": "```\n取得SSO導向URL\n參數:\nPAGE: 導向頁面，未填寫或是空值則導向首頁\nCO_CODE: 公司代碼(必填)\nLOCALE: 語系(zh_TW / en_US / zh_CN)，未填寫則預設為zh_TW\n\n```\n```\nsso = {\n  \"REDIRECT_URL\": string,            //SSO導向_URL\n},\n```     \n"
+  },
+  {
+    "path": "/api/sso/verifyToken",
+    "method": "POST",
+    "summary": "驗證SSO Token",
+    "tags": [
+      "SSO"
+    ],
+    "description": "```\nemp = {\n  \"CO_CODE\": string,             //公司代碼\n  \"EMP_NO\": string,              //員工編號\n},\n```\n"
+  },
+  {
+    "path": "/api/sys/code",
+    "method": "POST",
+    "summary": "代碼資訊",
+    "tags": [
+      "SYS"
+    ],
+    "description": "```\nsysCode = {\n  \"CODE_TYPE\": string,        //代碼類型\n  \"CODE_CODE\": string,        //名稱\n  \"CODE_NAME\": string,        //名稱\n  \"cODE_NAME_JSON\": boject,   //名稱_JSON\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/getAgentSign",
+    "method": "POST",
+    "summary": "取得某員工簽核代理人資訊",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nagentSignItem = {\n  \"AGENT_SIGN_ID\": number,          //簽核代理人設定_ID\n  \"CO_ID\": number,                  //公司_ID\n  \"EMP_ID\": number,                 //員工_ID\n  \"EMP_NO\": string,                 //員工編號\n  \"AGENT_SIGN_EMP_ID\": number,      //代理人員工_ID\n  \"AGENT_SIGN_EMP_NO\": string,      //代理人員工編號\n  \"AGENT_SIGN_EMP_NAME\": string,    //代理人姓名\n  \"AGENT_STIME\": date,              //代理起始時間\n  \"AGENT_ETIME\": date,              //代理迄止時間\n  \"FORM_CODE\": string,              //簽核表單代號\n  \"FORMSET_NAME\": string,           //公司表單名稱\n  \"IS_ACT\": number,                 //使用狀態        \n  \"E_EMP_ID\": number,               //修改_員工_ID                  \n  \"E_EMP_NO\": string,               //修改_員工編號   \n  \"E_DATETIME\": date,               //修改_日期  \n},\n```\n"
+  },
+  {
+    "path": "/api/wf/getBatchAgents",
+    "method": "POST",
+    "summary": "批次取得員工職務代理人清單",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nagents = {\n  \"EMP_ID\": number,       //員工_ID\n, \"AGENT_EMP_ID\": number, //代理人員工_ID\n, \"CO_ID\": number,        //代理人公司_ID\n, \"EMP_NO\": string,       //代理人員工編號\n, \"EMP_NAME\": string,     //代理人員工姓名\n, \"EMP_EN_NAME\": string,  //代理人英文姓名\n, \"DEPT1_ID\": number,     //代理人部門1_ID\n, \"DEPT1_CODE\": string,   //代理人部門1\n, \"DEPT1_NAME\": string,   //代理人部門1名稱\n, \"DEPT2_ID\": number,     //代理人部門2_ID\n, \"DEPT2_CODE\": string,   //代理人部門2\n, \"DEPT2_NAME\": string,   //代理人部門2名稱\n, \"DEPT3_ID\": number,     //代理人部門3_ID\n, \"DEPT3_CODE\": string,   //代理人部門3\n, \"DEPT3_NAME\": string,   //代理人部門3名稱\n, \"DEPT4_ID\": number,     //代理人部門4_ID\n, \"DEPT4_CODE\": string,   //代理人部門4\n, \"DEPT4_NAME\": string,   //代理人部門4名稱\n, \"DEPT5_ID\": number,     //代理人部門5_ID\n, \"DEPT5_CODE\": string,   //代理人部門5\n, \"DEPT5_NAME\": string,   //代理人部門5名稱\n, \"JOB_ID\": number,       //代理人職位_ID\n, \"JOB_CODE\": string,     //代理人職位\n, \"JOB_NAME\": string,     //代理人職位名稱\n, \"WORK_STATUS\": number,  //代理人在職狀況\n, \"HIRE_DATE\":date,       //代理人到職日期\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/leaveitems",
+    "method": "POST",
+    "summary": "取得某員工適用假勤項目資訊",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nleaveitems = {\n  \"LEAVEITEM_ID\":number,        //假勤項目_ID\n  \"CO_ID\": number,              //公司_ID\n  \"LEAVEITEM_CODE\":string,      //假勤項目代碼\n  \"LEAVEITEM_NAME\":string,      //假勤項目名稱\n  \"LEAVEITEM_NAME_JSON\":boject, //假勤項目名稱_JSON\n  \"LEAVEITEM_DESC\":string,      //假勤項目說明\n  \"LEAVEITEM_DESC_JSON\":boject, //假勤項目說明_JSON\n  \"SPECIFIC_CODE\":string,       //特定代碼\n  \"PERIOD_TYPE\":string,         //計算期間(種類)\n  \"UNIT\":string,                //假勤單位\n  \"UNIT_VALUE\":number,          //假勤單位(數值)\n  \"BASE004\":number,             //職務代理人必填\n  \"BASE005\":number,             //請假原因必填\n  \"BASE006\":number,             //附件必填\n  \"BASE012\":number,             //假勤說明顯示\n  \"SORT_ORDER\":number,          //排序\n  \"IS_ACT\":number,              //使用狀態\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/leaveEvent",
+    "method": "POST",
+    "summary": "取得某員工某假勤項目事件發生日資訊",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nleaveEvent = {\n  \"EMP_LEAVE_EVENT_ID\":number, //事件發生日_ID\n  \"CO_ID\":number,              //公司_ID\n  \"EMP_ID\":number,             //員工_ID\n  \"LEAVEITEM_ID\":number,       //假勤項目_ID\n  \"EVENT_DATE\":date,            //事件發生日\n  \"EVENT_DESC\":string,          //事件發生日說明\n  \"ALLOW_SDATE\":date,           //可休期間起\n  \"ALLOW_EDATE\":date,           //可休期間迄\n  \"EVENT_FULL_DESC\":string,     //事件發生日組合說明\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/leaveTime",
+    "method": "POST",
+    "summary": "得到請假時數計算資訊",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nleaveTime = {\n  \"CO_ID\":number,        //公司_ID\n  \"EMP_ID\":number,       //員工_ID\n  \"LEAVEITEM_ID\":number, //假勤項目_ID\n  \"LEAVE_START\":date,     //請假起始時間\n  \"LEAVE_END\":date,       //請假結束時間\n  \"LEAVE_VALUE\":number,  //合計扣假請假數\n  \"LEAVE_MINS\":number,   //合計扣假請假分鐘數\n  \"DED_VALUE\":number,    //合計扣除分鐘數\n  \"UNIT\":string,          //請假當時假勤單位\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/getUsed",
+    "method": "POST",
+    "summary": "員工假勤剩餘時數資訊",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ngetUsed = {\n  \"EMP_ID\":number,//員工_ID\n  \"LEAVEITEM_ID\":number,//假勤項目_ID\n  \"UNIT\":string,//假勤單位\n  \"LEAVE_VALUE\":number,//可休\n  \"USE_VALUE\":number,//已休\n  \"REMAIN_VALUE\":number,//剩餘(不含在途)\n  \"ONWAY_REMAIN_VALUE\":number,//剩餘(含在途)\n  \"LIMIT_TIMES\":number,//可休次數\n  \"USE_TIMES\":number,//已休次數\n  \"REMAIN_TIMES\":number,//剩餘次數(不含在途)\n  \"ONWAY_REMAIN_TIMES\":number,//剩餘次數(含在途)\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/agents",
+    "method": "POST",
+    "summary": "取得員工職務代理人清單資訊",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nagents = {\n  \"EMP_ID\": number,       //員工_ID\n, \"AGENT_EMP_ID\": number, //代理人員工_ID\n, \"CO_ID\": number,        //代理人公司_ID\n, \"EMP_NO\": string,       //代理人員工編號\n, \"EMP_NAME\": string,     //代理人員工姓名\n, \"EMP_EN_NAME\": string,  //代理人英文姓名\n, \"DEPT1_ID\": number,     //代理人部門1_ID\n, \"DEPT1_CODE\": string,   //代理人部門1\n, \"DEPT1_NAME\": string,   //代理人部門1名稱\n, \"DEPT2_ID\": number,     //代理人部門2_ID\n, \"DEPT2_CODE\": string,   //代理人部門2\n, \"DEPT2_NAME\": string,   //代理人部門2名稱\n, \"DEPT3_ID\": number,     //代理人部門3_ID\n, \"DEPT3_CODE\": string,   //代理人部門3\n, \"DEPT3_NAME\": string,   //代理人部門3名稱\n, \"DEPT4_ID\": number,     //代理人部門4_ID\n, \"DEPT4_CODE\": string,   //代理人部門4\n, \"DEPT4_NAME\": string,   //代理人部門4名稱\n, \"DEPT5_ID\": number,     //代理人部門5_ID\n, \"DEPT5_CODE\": string,   //代理人部門5\n, \"DEPT5_NAME\": string,   //代理人部門5名稱\n, \"JOB_ID\": number,       //代理人職位_ID\n, \"JOB_CODE\": string,     //代理人職位\n, \"JOB_NAME\": string,     //代理人職位名稱\n, \"WORK_STATUS\": number,  //代理人在職狀況\n, \"HIRE_DATE\":date,       //代理人到職日期\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/checkLeave",
+    "method": "POST",
+    "summary": "假勤檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ncheckLeave = {\n  \"LEAVE_VALUE\": number,        //假勤時數\n  \"LEAVE_VALUE_UNIT\": string,   //假勤時數單位\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/insertLeave",
+    "method": "POST",
+    "summary": "假勤寫入",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ninsertLeave = {\n  \"EMP_LEAVE_ID\": number,         //寫入成功的假勤主檔ID\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/deleteLeaveList",
+    "method": "POST",
+    "summary": "假勤刪除列表",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeleteLeaveList = {\n  \"CO_ID\": number,         //公司_ID\n  \"EMP_ID\": number,        //員工_ID\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/checkDeleteLeave",
+    "method": "POST",
+    "summary": "假勤刪除檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ncheckDeleteLeave = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/deleteLeave",
+    "method": "POST",
+    "summary": "假勤刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeleteLeave = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf010/getRemainLeave",
+    "method": "POST",
+    "summary": "取得員工年度剩餘假勤列表",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nRemain = {\n  \"EMP_ID\": number,         //員工_ID\n  \"LEAVE_KIND\": string,     //假勤類型\n  \"LEAVEITEM_ID\": number,  //假勤項目_ID\n  \"EMP_LEAVE_EVENT_ID\"?: number | null,//事件發生日_ID\n  \"LEAVEITEM_NAME\": string, //假勤名稱\n  \"LEAVE_START\": date,      //可休期間起\n  \"LEAVE_END\": date,        //可休期間迄\n  \"LEAVE_RULE\": string,     //可休規則\n  \"LEAVE_USED\": string,     //已休(不包含在途)\n  \"LEAVE_USED_PLUS_ONWAY\": string, //已休(包含在途)\n  \"LEAVE_REMAIN\": string,   //剩餘(不包含在途)\n  \"LEAVE_ONWAY\": string,    //簽核中\n  \"LEAVE_REST\": string,     //基準日可申請(包含在途)\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf011/batchLeaveNew",
+    "method": "POST",
+    "summary": "批次請假單新增",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf011/batchLeaveUpd",
+    "method": "POST",
+    "summary": "批次請假單修改",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf011/batchLeaveSign",
+    "method": "POST",
+    "summary": "批次請假單簽核完成",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf011/batchLeaveDelete",
+    "method": "POST",
+    "summary": "批次請假單刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf011/batchLeaveitems",
+    "method": "POST",
+    "summary": "取得某員工適用假勤項目(排除事件發生日)",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nleaveitems = {\n  \"LEAVEITEM_ID\":number,        //假勤項目_ID\n  \"CO_ID\": number,              //公司_ID\n  \"LEAVEITEM_CODE\":string,      //假勤項目代碼\n  \"LEAVEITEM_NAME\":string,      //假勤項目名稱\n  \"LEAVEITEM_NAME_JSON\":boject, //假勤項目名稱_JSON\n  \"LEAVEITEM_DESC\":string,      //假勤項目說明\n  \"LEAVEITEM_DESC_JSON\":boject, //假勤項目說明_JSON\n  \"SPECIFIC_CODE\":string,       //特定代碼\n  \"PERIOD_TYPE\":string,         //計算期間(種類)\n  \"UNIT\":string,                //假勤單位\n  \"UNIT_VALUE\":number,          //假勤單位(數值)\n  \"BASE004\":number,             //職務代理人必填\n  \"BASE005\":number,             //請假原因必填\n  \"BASE006\":number,             //附件必填\n  \"BASE012\":number,             //假勤說明顯示\n  \"SORT_ORDER\":number,          //排序\n  \"IS_ACT\":number,              //使用狀態\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf020/checkOt",
+    "method": "POST",
+    "summary": "加班檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ncheckOt = {\n  \"OT_VALUE\": number,        //加班時數\n  \"OT_VALUE_UNIT\": string,   //加班時數單位\n  \"OT_MINS\": integer,        //加班分鐘數\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf020/insertOt",
+    "method": "POST",
+    "summary": "加班寫入",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ninsertOt = {\n  \"EMP_OT_ID\": number,         //寫入成功的加班主檔ID\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf020/deleteOtList",
+    "method": "POST",
+    "summary": "加班刪除列表",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeleteOtList = {\n  \"CO_ID\": number,         //公司_ID\n  \"EMP_ID\": number,        //員工_ID\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf020/checkDeleteOt",
+    "method": "POST",
+    "summary": "加班刪除檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ncheckDeleteOt = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf020/deleteOt",
+    "method": "POST",
+    "summary": "加班刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeleteOt = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf020/otTime",
+    "method": "POST",
+    "summary": "取得剩餘加班時數",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\notTime = {\n  \"OT_VALUE\": number,        //加班時數\n  \"OT_VALUE_UNIT\": string,   //加班時數單位\n  \"OT_MINS\": integer,        //加班分鐘數\n  \"OT_REASON\": number,       //加班原因是否必填\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf021/batchOtNew",
+    "method": "POST",
+    "summary": "批次加班單新增",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf021/batchOtUpd",
+    "method": "POST",
+    "summary": "批次加班單修改",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf021/batchOtSign",
+    "method": "POST",
+    "summary": "批次加班單簽核完成",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf021/batchOtDelete",
+    "method": "POST",
+    "summary": "批次加班單刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf022/import_ot_hour",
+    "method": "POST",
+    "summary": "加班時數匯入",
+    "tags": [
+      "WF"
+    ],
+    "description": "使用說明： 依 Max 加班時數-匯入格式產生 excel 後，打這個 API"
+  },
+  {
+    "path": "/api/wf/wf022/checkPreOt",
+    "method": "POST",
+    "summary": "預先加班檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ncheckPreOt = {\n  \"OT_VALUE\": number,        //預先加班時數\n  \"OT_VALUE_UNIT\": string,   //預先加班時數單位\n  \"OT_MINS\": integer,        //預先加班分鐘數\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf022/insertPreOt",
+    "method": "POST",
+    "summary": "預先加班寫入",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ninsertPreOt = {\n  \"EMP_PREOT_ID\": number,         //寫入成功的預先加班主檔ID\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf022/deletePreOtList",
+    "method": "POST",
+    "summary": "預先加班刪除列表",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeletePreOtList = {\n  \"CO_ID\": number,         //公司_ID\n  \"EMP_ID\": number,        //員工_ID\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf022/checkDeletePreOt",
+    "method": "POST",
+    "summary": "預先加班刪除檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ncheckDeletePreOt = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf022/deletePreOt",
+    "method": "POST",
+    "summary": "預先加班刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeletePreOt = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf022/preOtList",
+    "method": "POST",
+    "summary": "取得預先加班單列表",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\npreOtList = {\n  \"EM_PPREOT_ID\": number, //預先加班ID\n  \"CO_ID\": number, //公司_ID\n  \"EMP_ID\": number, //員工_ID\n  \"OT_START\": string,     //加班開始\n  \"OT_END\": string,       //加班結束\n  \"UNIT\": string,         //單位\n  \"OT_VALUE\": number,     //加班時數\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf022/preOtTime",
+    "method": "POST",
+    "summary": "取得剩餘加班時數",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\notTime = {\n  \"OT_VALUE\": number,        //加班時數\n  \"OT_VALUE_UNIT\": string,   //加班時數單位\n  \"OT_MINS\": integer,        //加班分鐘數\n  \"OT_REASON\": number,       //加班原因是否必填\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf030/checkCard",
+    "method": "POST",
+    "summary": "忘刷時間檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf030/insertCard",
+    "method": "POST",
+    "summary": "忘刷時間寫入",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf030/checkDeleteCard",
+    "method": "POST",
+    "summary": "忘刷時間刪除檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf030/deleteCard",
+    "method": "POST",
+    "summary": "忘刷時間刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf031/UpdOverAttend",
+    "method": "POST",
+    "summary": "更新超時出勤原因",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wf100/businessTrip",
+    "method": "POST",
+    "summary": "取得職務代理人是否必填",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nbusinessTrip = {\n  \"BASE004\": number,        // 職務代理人是否必填 { 0:非必填 1:必填 }\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf100/leaveTime",
+    "method": "POST",
+    "summary": "取得出差合計單位數",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\nleaveTime = {\n  CO_ID: number,               //公司_ID\n  EMP_ID: number,              //員工_ID\n  LEAVE_VALUE: number,         //合計出差單位數\n  LEAVE_MINS: number,          //合計出差分鐘數\n  DED_VALUE: number,           //合計扣除分鐘數\n  UNIT: string,                //出差單位\n  RULE: string,                //規則\n  MSG: string,                 //錯誤訊息(RULE為，warning時顯示提示訊息, error時則顯示錯誤訊息)\n}\n\n檢查代理期間可請假\nRULE: 'warning' (提示訊息)\nMSG: '部分或全部的出差時間已擔任其他同仁的職務代理人'\n\nRULE: 'error' (錯誤訊息)\nMSG: '部分或全部的出差時間已擔任其他同仁的職務代理人'\n\n```\n"
+  },
+  {
+    "path": "/api/wf/wf100/checkBiz",
+    "method": "POST",
+    "summary": "出差單檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "requestBody 的 REQUEST_TYPE 說明\n```\n1、若REQUEST_TYPE為1(整體出差行程)，bizTrips為[]，需求欄位:\n  BIZ_PROPERTY_ID、AGENT_ID、BIZ_DATETIME、BIZ_TRANS_IDS、\n  BIZ_TODO_IDS、BIZ_AREA_ID、REASON、REQUEST_TYPE\n\n2、若REQUEST_TYPE為2(詳細出差行程)，需求欄位:\n  BIZ_PROPERTY_ID、AGENT_ID、BIZ_DATETIME、BIZ_TRANS_IDS、\n  BIZ_TODO_IDS、REQUEST_TYPE、BIZ_TRIPS  \n\nEMP_BIZ_ID 編輯模式為必填\n```\n"
+  },
+  {
+    "path": "/api/wf/wf100/insertBiz",
+    "method": "POST",
+    "summary": "出差單申請",
+    "tags": [
+      "WF"
+    ],
+    "description": "requestBody 的 REQUEST_TYPE 說明\n```\n1、若REQUEST_TYPE為1(整體出差行程)，bizTrips為[]，需求欄位:\n  BIZ_PROPERTY_ID、AGENT_ID、BIZ_DATETIME、BIZ_TRANS_IDS、\n  BIZ_TODO_IDS、BIZ_AREA_ID、REASON、REQUEST_TYPE、WF_NO、WF_RESULT\n\n2、若REQUEST_TYPE為2(詳細出差行程)，需求欄位:\n  BIZ_PROPERTY_ID、AGENT_ID、BIZ_DATETIME、BIZ_TRANS_IDS、\n  BIZ_TODO_IDS、REQUEST_TYPE、BIZ_TRIPS、WF_NO、WF_RESULT\n\nEMP_BIZ_ID 編輯模式為必填        \n```\n"
+  },
+  {
+    "path": "/api/wf/wf100/checkDeleteBiz",
+    "method": "POST",
+    "summary": "出差刪除檢查",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeleteLeave = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wf100/deleteBiz",
+    "method": "POST",
+    "summary": "出差刪除",
+    "tags": [
+      "WF"
+    ],
+    "description": "```\ndeleteLeave = {\n  \"RETURN_CODE\": number,  //回傳訊息代號\n  \"RETURN_MSG\": string,   //回傳訊息\n},\n```\n"
+  },
+  {
+    "path": "/api/wf/wfcust/form",
+    "method": "POST",
+    "summary": "表單類別API",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wfcust/component",
+    "method": "POST",
+    "summary": "元件資料API",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/wf/wfcust/request",
+    "method": "POST",
+    "summary": "簽核完成資料API",
+    "tags": [
+      "WF"
+    ],
+    "description": ""
+  },
+  {
+    "path": "/api/zz/standard/benefit/emp",
+    "method": "POST",
+    "summary": "取得有福企系統員工須同步資料",
+    "tags": [
+      "ZZ"
+    ],
+    "description": "```\nemp = {\n  \"CO_ID\": number,                    //公司_ID\n  \"EMP_ID\": number,                   //員工_ID\n  \"enterprise_id\": string,            //公司代碼\n  \"user_email\": string,               //公司e-mail\n  \"user_name\": string,                //員工姓名\n  \"employee_no\": string,              //員工編號\n  \"employee_id\": string,              //身分證號\n  \"birthday\": date,                   //生日\n  \"grade_id\": string,                 //職等名稱\n  \"position_name\": string,            //職稱名稱\n  \"effective\": string,                //員工狀態\n  \"PAR_CODE\": string,                 //員工類型\n  \"cellphone\": string,                //手機\n  \"E_DATETIME\": date,                 //修改_日期\n},\n```\n"
+  }
+]
