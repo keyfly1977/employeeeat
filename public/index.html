@@ -1071,8 +1071,16 @@
         ? `<span style="font-size: 0.85rem; color: var(--color-orange); margin-left: 5px;">(齋戒設定: ${currentSettings.ramadan_start} ~ ${currentSettings.ramadan_end})</span>`
         : '';
 
+      const isLunchActive = currentFilterStatus.startsWith('lunch');
+      const isDinnerActive = currentFilterStatus.startsWith('dinner');
+      const isRamadanActive = currentFilterStatus === 'ramadan';
+
+      const lunchBoxStyle = `flex:1; background: ${isLunchActive ? 'rgba(10,132,255,0.1)' : 'rgba(255,255,255,0.5)'}; padding: 15px; border-radius: 8px; border: 2px solid ${isLunchActive ? 'var(--color-blue)' : 'transparent'}; transition: all 0.3s ease; transform: ${isLunchActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isLunchActive ? '0 4px 12px rgba(10,132,255,0.2)' : 'none'};`;
+      const dinnerBoxStyle = `flex:1; background: ${isDinnerActive ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.5)'}; padding: 15px; border-radius: 8px; border: 2px solid ${isDinnerActive ? 'var(--color-orange)' : 'transparent'}; transition: all 0.3s ease; transform: ${isDinnerActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isDinnerActive ? '0 4px 12px rgba(255,159,10,0.2)' : 'none'};`;
+      const ramadanBoxStyle = `flex:1; background: rgba(175,82,222,0.08); padding: 15px; border-radius: 8px; border: 2px solid ${isRamadanActive ? 'var(--color-purple, #af52de)' : 'rgba(175,82,222,0.2)'}; cursor: pointer; transition: all 0.3s ease; transform: ${isRamadanActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isRamadanActive ? '0 4px 12px rgba(175,82,222,0.2)' : 'none'};`;
+
       document.getElementById('meal-summary').innerHTML = `
-          <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
+          <div style="${lunchBoxStyle}">
             <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-blue); cursor: pointer;" onclick="setFilter('lunch')">🍱 午餐總計: ${lunchTotal} 個</div>
             <div style="color: var(--text-secondary); line-height: 1.6;">
               <span style="${getLunchStyle('lunch-葷食')}" onclick="setFilter('lunch-葷食')">葷食: <strong>${counts.lunch['葷食']}</strong></span> | 
@@ -1083,7 +1091,7 @@
               <span style="${getLunchStyle('lunch-齋戒')}" onclick="setFilter('lunch-齋戒')">齋戒: <strong>${counts.lunch['齋戒']}</strong></span> ${ramadanStr}
             </div>
           </div>
-          <div style="flex:1; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px;">
+          <div style="${dinnerBoxStyle}">
             <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-orange); cursor: pointer;" onclick="setFilter('dinner')">🌙 晚餐總計: ${dinnerTotal} 個</div>
             <div style="color: var(--text-secondary); line-height: 1.6;">
               <span style="${getDinnerStyle('dinner-葷食')}" onclick="setFilter('dinner-葷食')">葷食: <strong>${counts.dinner['葷食']}</strong></span> | 
@@ -1094,7 +1102,7 @@
               <span style="${getDinnerStyle('dinner-齋戒')}" onclick="setFilter('dinner-齋戒')">齋戒: <strong>${counts.dinner['齋戒']}</strong></span> ${ramadanStr}
             </div>
           </div>
-          <div style="flex:1; background: rgba(175,82,222,0.08); padding: 15px; border-radius: 8px; border: 1px solid rgba(175,82,222,0.2); cursor: pointer;" onclick="setFilter('ramadan')">
+          <div style="${ramadanBoxStyle}" onclick="setFilter('ramadan')">
             <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-purple, #af52de); display: flex; align-items: center; gap: 8px;">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
               齋戒中: ${ramadanCount} 人
