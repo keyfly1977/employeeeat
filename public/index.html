@@ -386,41 +386,76 @@
             <input type="number" id="set-bento" required>
           </div>
 
-          <h3 style="margin-top: 25px; margin-bottom: 15px; font-size: 1.1rem; color: var(--color-primary);">🇹🇼 本國員工設定
-          </h3>
-          <div style="display: flex; gap: 15px;">
-            <div class="form-group" style="flex: 1;">
-              <label>本國發餐費底數 (月/元)</label>
-              <input type="number" id="set-tw-base" required>
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label>台灣員工伙食津貼 (月/元)</label>
-              <input type="number" id="set-tw" required>
-            </div>
-          </div>
+          <h3 style="margin-top: 25px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🇹🇼 本國員工加減項名目</h3>
+          <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+            <thead>
+              <tr style="color:var(--text-muted); font-size:0.85rem; border-bottom:2px solid var(--glass-border);">
+                <th style="padding:8px 6px; width:80px; text-align:center;">類型</th>
+                <th style="padding:8px 6px; text-align:left;">名目名稱</th>
+                <th style="padding:8px 6px; width:130px; text-align:left;">金額 (元/月)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="tw-base-label" placeholder="例：發餐費底數" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-tw-base" required placeholder="1800" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="tw-allowance-label" placeholder="例：伙食津貼" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-tw" required placeholder="300" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖ 減項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="tw-deduct-label" placeholder="例：應扣伙食費" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; color:var(--text-muted); font-size:0.9rem; padding-left:12px;">依便當數計算</td>
+              </tr>
+            </tbody>
+          </table>
 
-          <h3 style="margin-top: 25px; margin-bottom: 15px; font-size: 1.1rem; color: var(--color-primary);">🌏 外籍員工設定
-          </h3>
-          <div style="display: flex; gap: 15px;">
-            <div class="form-group" style="flex: 1;">
-              <label>外籍發餐費底數 (月/元)</label>
-              <input type="number" id="set-fr-base" required>
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label>假日未加班津貼 (日/元)</label>
-              <input type="number" id="set-fr-0" required>
-            </div>
-          </div>
-          <div style="display: flex; gap: 15px;">
-            <div class="form-group" style="flex: 1;">
-              <label>假日加班 8hr 津貼 (日/元)</label>
-              <input type="number" id="set-fr-8" required>
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label>假日加班 10hr+ 津貼 (日/元)</label>
-              <input type="number" id="set-fr-10" required>
-            </div>
-          </div>
+          <h3 style="margin-top: 30px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🌏 外籍員工加減項名目</h3>
+          <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+            <thead>
+              <tr style="color:var(--text-muted); font-size:0.85rem; border-bottom:2px solid var(--glass-border);">
+                <th style="padding:8px 6px; width:80px; text-align:center;">類型</th>
+                <th style="padding:8px 6px; text-align:left;">名目名稱</th>
+                <th style="padding:8px 6px; width:130px; text-align:left;">金額 (元/天)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-base-label" placeholder="例：發餐費底數" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-base" required placeholder="300" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-holiday-label" placeholder="例：假日未加班" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-0" required placeholder="100" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-ot8-label" placeholder="例：假日加班 8hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-8" required placeholder="125" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-ot10-label" placeholder="例：假日加班 10hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-10" required placeholder="150" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-ot12-label" placeholder="例：假日加班 12hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-12" required placeholder="150" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖ 減項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-deduct-label" placeholder="例：應扣伙食費" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; color:var(--text-muted); font-size:0.9rem; padding-left:12px;">依便當數計算</td>
+              </tr>
+            </tbody>
+          </table>
 
           <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.1rem;">📅 齋戒月自動化設定</h3>
           <div style="display: flex; gap: 15px;">
@@ -602,10 +637,21 @@
       document.getElementById('set-fr-0').value = data.foreign_holiday_allowance || 100;
       document.getElementById('set-fr-8').value = data.foreign_holiday_ot_8hr_allowance || 125;
       document.getElementById('set-fr-10').value = data.foreign_holiday_ot_10hr_allowance || 150;
+      document.getElementById('set-fr-12').value = data.foreign_holiday_ot_12hr_allowance || 150;
       document.getElementById('set-tw-base').value = data.taiwanese_base_allowance || 300;
       document.getElementById('set-fr-base').value = data.foreign_base_allowance || 300;
       document.getElementById('set-ramadan-start').value = data.ramadan_start || '2026-02-18';
       document.getElementById('set-ramadan-end').value = data.ramadan_end || '2026-03-19';
+      // Labels
+      document.getElementById('tw-base-label').value = data.tw_base_label || '發餐費底數';
+      document.getElementById('tw-allowance-label').value = data.tw_allowance_label || '伙食津貼';
+      document.getElementById('tw-deduct-label').value = data.tw_deduct_label || '應扣伙食費';
+      document.getElementById('fr-base-label').value = data.fr_base_label || '發餐費底數';
+      document.getElementById('fr-holiday-label').value = data.fr_holiday_label || '假日未加班';
+      document.getElementById('fr-ot8-label').value = data.fr_ot8_label || '假日加班 8hr';
+      document.getElementById('fr-ot10-label').value = data.fr_ot10_label || '假日加班 10hr';
+      document.getElementById('fr-ot12-label').value = data.fr_ot12_label || '假日加班 12hr';
+      document.getElementById('fr-deduct-label').value = data.fr_deduct_label || '應扣伙食費';
     }
 
     let isGuardUnlocked = false;
@@ -788,10 +834,21 @@
       currentSettings['foreign_holiday_allowance'] = document.getElementById('set-fr-0').value;
       currentSettings['foreign_holiday_ot_8hr_allowance'] = document.getElementById('set-fr-8').value;
       currentSettings['foreign_holiday_ot_10hr_allowance'] = document.getElementById('set-fr-10').value;
+      currentSettings['foreign_holiday_ot_12hr_allowance'] = document.getElementById('set-fr-12').value;
       currentSettings['taiwanese_base_allowance'] = document.getElementById('set-tw-base').value;
       currentSettings['foreign_base_allowance'] = document.getElementById('set-fr-base').value;
       currentSettings['ramadan_start'] = document.getElementById('set-ramadan-start').value;
       currentSettings['ramadan_end'] = document.getElementById('set-ramadan-end').value;
+      // Labels
+      currentSettings['tw_base_label'] = document.getElementById('tw-base-label').value;
+      currentSettings['tw_allowance_label'] = document.getElementById('tw-allowance-label').value;
+      currentSettings['tw_deduct_label'] = document.getElementById('tw-deduct-label').value;
+      currentSettings['fr_base_label'] = document.getElementById('fr-base-label').value;
+      currentSettings['fr_holiday_label'] = document.getElementById('fr-holiday-label').value;
+      currentSettings['fr_ot8_label'] = document.getElementById('fr-ot8-label').value;
+      currentSettings['fr_ot10_label'] = document.getElementById('fr-ot10-label').value;
+      currentSettings['fr_ot12_label'] = document.getElementById('fr-ot12-label').value;
+      currentSettings['fr_deduct_label'] = document.getElementById('fr-deduct-label').value;
 
       await fetch('/api/settings', {
         method: 'POST',
