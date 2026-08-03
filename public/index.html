@@ -125,7 +125,7 @@
       border: 2px solid #b3c0d1;
       border-radius: var(--border-radius-sm);
       background: #ffffff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) inset, 0 1px 3px rgba(0, 0, 0, 0.05);
       font-size: 1.1rem;
       outline: none;
       transition: var(--transition-smooth);
@@ -181,11 +181,25 @@
 
 <body>
   <div class="app-container no-print">
-    <header class="app-header">
+    <header class="app-header"
+      style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
       <div class="header-left">
-        <h1><span style="font-weight: 300;">外勞用餐</span> <strong>自動化系統</strong></h1>
+        <h1><span style="font-weight: 300;">公司用餐</span> <strong>自動化系統</strong></h1>
         <span class="badge"
           style="background: var(--color-blue); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; margin-left: 15px;">V1.1</span>
+      </div>
+      <div class="header-right division-filter" style="margin-top: 10px;">
+        <div class="segmented-control"
+          style="display: flex; background: var(--glass-bg); padding: 5px; border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--glass-border);">
+          <button class="seg-btn active" onclick="setDivision('all', this)"
+            style="padding: 8px 16px; border: none; background: var(--color-blue); color: white; border-radius: 15px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 8px rgba(10,132,255,0.3);">全部</button>
+          <button class="seg-btn" onclick="setDivision('皮革', this)"
+            style="padding: 8px 16px; border: none; background: transparent; color: var(--text-secondary); border-radius: 15px; cursor: pointer; font-weight: 600; transition: all 0.2s;">皮革</button>
+          <button class="seg-btn" onclick="setDivision('紡織', this)"
+            style="padding: 8px 16px; border: none; background: transparent; color: var(--text-secondary); border-radius: 15px; cursor: pointer; font-weight: 600; transition: all 0.2s;">紡織</button>
+          <button class="seg-btn" onclick="setDivision('其他', this)"
+            style="padding: 8px 16px; border: none; background: transparent; color: var(--text-secondary); border-radius: 15px; cursor: pointer; font-weight: 600; transition: all 0.2s;">未分</button>
+        </div>
       </div>
     </header>
 
@@ -260,16 +274,16 @@
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <h3 id="list-title" style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;">📋
               今日名單</h3>
-            <div style="display: flex; align-items: center;">
+            <div class="action-buttons" style="display: flex; align-items: center; gap: 10px;">
               <input type="text" id="guard-search" placeholder="🔍 搜尋工號或姓名..."
                 style="padding: 10px 16px; margin-right: 15px; border: 2px solid #b3c0d1; border-radius: 8px; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05); font-size: 1rem; width: 220px; outline: none; transition: 0.3s;"
                 oninput="renderTable()"
                 onfocus="this.style.borderColor='var(--color-blue)'; this.style.boxShadow='0 0 0 3px rgba(10,132,255,0.2)'"
                 onblur="this.style.borderColor='#b3c0d1'; this.style.boxShadow='0 2px 5px rgba(0,0,0,0.08) inset, 0 1px 3px rgba(0,0,0,0.05)'">
               <button onclick="loadMeals()" class="btn-primary"
-                style="background: var(--glass-bg); color: var(--text-primary); margin-right: 15px;">🔄 重新整理</button>
+                style="background: var(--glass-bg); color: var(--text-primary);">🔄 重新整理</button>
               <button id="btn-save-all" onclick="saveAllMeals()" class="btn-primary"
-                style="background: var(--color-blue); margin-right: 15px;">💾 確認儲存</button>
+                style="background: var(--color-blue);">💾 確認儲存</button>
               <button id="btn-print" onclick="backendPrint()" class="btn-primary btn-success" disabled
                 style="opacity: 0.5; cursor: not-allowed;">🖨️ 列印</button>
             </div>
@@ -387,7 +401,8 @@
             <input type="number" id="set-bento" required>
           </div>
 
-          <h3 style="margin-top: 25px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🇹🇼 本國員工加減項名目</h3>
+          <h3 style="margin-top: 25px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🇹🇼
+            本國員工加減項名目</h3>
           <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
             <thead>
               <tr style="color:var(--text-muted); font-size:0.85rem; border-bottom:2px solid var(--glass-border);">
@@ -398,24 +413,41 @@
             </thead>
             <tbody>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="tw-base-label" placeholder="例：發餐費底數" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-tw-base" required placeholder="1800" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="tw-base-label" placeholder="例：發餐費底數"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-tw-base" required placeholder="1800"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="tw-allowance-label" placeholder="例：伙食津貼" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-tw" required placeholder="300" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="tw-allowance-label" placeholder="例：伙食津貼"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-tw" required placeholder="300"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr>
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖ 減項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="tw-deduct-label" placeholder="例：應扣伙食費" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖
+                    減項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="tw-deduct-label" placeholder="例：應扣伙食費"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
                 <td style="padding:8px 6px; color:var(--text-muted); font-size:0.9rem; padding-left:12px;">依便當數計算</td>
               </tr>
             </tbody>
           </table>
 
-          <h3 style="margin-top: 30px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🌏 外籍員工加減項名目</h3>
+          <h3 style="margin-top: 30px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🌏
+            外籍員工加減項名目</h3>
           <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
             <thead>
               <tr style="color:var(--text-muted); font-size:0.85rem; border-bottom:2px solid var(--glass-border);">
@@ -426,25 +458,42 @@
             </thead>
             <tbody>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-base-label" placeholder="例：發餐費底數" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-fr-base" required placeholder="300" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-base-label" placeholder="例：發餐費底數"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-base" required placeholder="300"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-allowance-label" placeholder="例：伙食津貼" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-fr-allowance" required placeholder="0" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-allowance-label" placeholder="例：伙食津貼"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-allowance" required placeholder="0"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr>
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖ 減項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-deduct-label" placeholder="例：應扣伙食費" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖
+                    減項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-deduct-label" placeholder="例：應扣伙食費"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
                 <td style="padding:8px 6px; color:var(--text-muted); font-size:0.9rem; padding-left:12px;">依便當數計算</td>
               </tr>
             </tbody>
           </table>
 
           <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.1rem;">⏱️ 加班補貼名目 (本外勞通用)</h3>
-          <table style="width:100%; border-collapse:collapse; background:rgba(255,255,255,0.4); border-radius:10px; overflow:hidden;">
+          <table
+            style="width:100%; border-collapse:collapse; background:rgba(255,255,255,0.4); border-radius:10px; overflow:hidden;">
             <thead style="background:rgba(255,255,255,0.6);">
               <tr>
                 <th style="padding:8px 6px; width:60px; text-align:center;">類型</th>
@@ -454,24 +503,48 @@
             </thead>
             <tbody>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot4-label" placeholder="例：平日加班 >=4hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot4" required placeholder="75" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="ot4-label" placeholder="例：平日加班 >=4hr"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-ot4" required placeholder="75"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot8-label" placeholder="例：假日加班 >=8hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot8" required placeholder="75" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="ot8-label" placeholder="例：假日加班 >=8hr"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-ot8" required placeholder="75"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot10-label" placeholder="例：假日加班 >=10hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot10" required placeholder="150" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="ot10-label" placeholder="例：假日加班 >=10hr"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-ot10" required placeholder="150"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
               <tr>
-                <td style="padding:8px 6px; text-align:center;"><span style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕ 加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot12-label" placeholder="例：假日加班 >=12hr" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot12" required placeholder="225" style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;"></td>
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="ot12-label" placeholder="例：假日加班 >=12hr"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-ot12" required placeholder="225"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
               </tr>
             </tbody>
           </table>
@@ -506,8 +579,7 @@
             <thead>
               <tr
                 style="color: var(--text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">工號</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">姓名</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: var(--glass-bg); z-index: 2; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05);">人員 (工號/姓名)</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">無住宿 (不發津貼)</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉中</th>
@@ -688,7 +760,7 @@
     function checkPassword() {
       if (isGuardUnlocked) return true;
       const pwd = prompt('請輸入密碼以解鎖修改權限：');
-      if (pwd === '5252') {
+      if (pwd === '885252') {
         isGuardUnlocked = true;
         return true;
       }
@@ -698,8 +770,14 @@
     }
 
     async function updateDiet(empId, dietType) {
-      if (!checkPassword()) return;
+      if (!checkPassword()) {
+        renderTable();
+        return;
+      }
       try {
+        const emp = allEmployeesData.find(e => String(e.empId) === String(empId));
+        if (emp) emp.dietType = dietType;
+
         await fetch('/api/employees/diet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -711,7 +789,7 @@
           btnPrint.style.opacity = '0.5';
           btnPrint.style.cursor = 'not-allowed';
         }
-        loadMeals();
+        renderTable(true);
       } catch (error) {
         console.error('Error updating diet:', error);
       }
@@ -768,7 +846,7 @@
           body: JSON.stringify({ empId, optOutLunch: emp.optOutLunch, optOutDinner: emp.optOutDinner, noHolidayAllowance: emp.noHolidayAllowance })
         });
 
-        loadMeals();
+        renderTable(true);
       } catch (error) {
         console.error('Error updating opt-out:', error);
       }
@@ -789,8 +867,10 @@
         foreignEmps.forEach(emp => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.emp_no || emp.emp_id}</td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 600;">${emp.name}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: rgba(255,255,255,0.85); z-index: 1; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
+              <div style="font-weight: 600;">${emp.name}</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">${emp.emp_no || emp.emp_id}</div>
+            </td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.department || '未分配'}</td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); text-align: center;">
               <input type="checkbox" class="hr-noacc-checkbox" data-empid="${emp.emp_id}" ${emp.no_accommodation === 1 ? 'checked' : ''} style="transform: scale(1.5); cursor: pointer; accent-color: var(--color-primary);">
@@ -891,7 +971,23 @@
     });
 
     let allEmployeesData = [];
-    let currentFilterStatus = 'all';
+    let currentFilterStatus = 'all'; // 'all', 'present', 'absent', 'leave'
+    let currentDivision = 'all'; // 'all', '皮革', '紡織', '其他'
+
+    function setDivision(div, btnElement) {
+      currentDivision = div;
+      document.querySelectorAll('.seg-btn').forEach(btn => {
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--text-secondary)';
+        btn.style.boxShadow = 'none';
+      });
+      if (btnElement) {
+        btnElement.style.background = 'var(--color-blue)';
+        btnElement.style.color = 'white';
+        btnElement.style.boxShadow = '0 2px 8px rgba(10,132,255,0.3)';
+      }
+      renderTable();
+    }
 
     function setFilter(status) {
       if (currentFilterStatus === status) {
@@ -949,14 +1045,15 @@
       }
     }
 
-    function renderTable() {
+    function renderTable(skipTbody = false) {
       const tbody = document.getElementById('meals-tbody');
-      tbody.innerHTML = '';
+      if (!skipTbody) tbody.innerHTML = '';
 
 
       // Set title with date
+      const divPrefix = currentDivision === 'all' ? '' : (currentDivision === '其他' ? '未分' : currentDivision);
       const todayDateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
-      document.getElementById('list-title').innerHTML = `📋 今日名單 <span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">(${todayDateStr})</span>`;
+      document.getElementById('list-title').innerHTML = `📋 ${divPrefix}今日名單 <span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">(${todayDateStr})</span>`;
 
       let counts = {
         lunch: { '葷食': 0, '素食': 0, '不吃豬': 0, '不吃牛': 0, '不吃羊': 0, '齋戒': 0 },
@@ -973,9 +1070,13 @@
       let ramadanCount = 0;
 
       const queryStr = document.getElementById('guard-search') ? document.getElementById('guard-search').value.trim().toLowerCase() : '';
-      const filteredData = queryStr
-        ? allEmployeesData.filter(emp => (emp.empNo || emp.empId || '').toLowerCase().includes(queryStr) || (emp.name || emp.empName || '').toLowerCase().includes(queryStr))
-        : allEmployeesData;
+      const filteredData = allEmployeesData.filter(emp => {
+        if (currentDivision !== 'all' && emp.division !== currentDivision) return false;
+        if (queryStr) {
+          return (emp.empNo || emp.empId || '').toLowerCase().includes(queryStr) || (emp.name || emp.empName || '').toLowerCase().includes(queryStr);
+        }
+        return true;
+      });
 
       filteredData.forEach(emp => {
         let catStr = emp.dietType;
@@ -1049,7 +1150,17 @@
               ${emp.name}
               <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">${emp.nationality}</div>
             </td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">${emp.deptName}</td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
+              <div>${emp.deptName}</div>
+              <div style="margin-top: 6px;">
+                <select onchange="updateDivision('${emp.empId}', this.value)" style="padding: 2px 4px; border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.5); color: var(--text-primary);">
+                  <option value="未分類" ${!['皮革', '紡織', '其他'].includes(emp.division) ? 'selected' : ''}>(自動判定)</option>
+                  <option value="皮革" ${emp.division === '皮革' ? 'selected' : ''}>皮革</option>
+                  <option value="紡織" ${emp.division === '紡織' ? 'selected' : ''}>紡織</option>
+                  <option value="其他" ${emp.division === '其他' ? 'selected' : ''}>其他 (共同)</option>
+                </select>
+              </div>
+            </td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); display: ${showDiet ? '' : 'none'};">
               <select onchange="updateDiet('${emp.empId}', this.value)" style="padding: 5px; border-radius: 5px; font-weight: bold; color: ${catColor}; border: 1px solid var(--glass-border); background: var(--glass-bg);">
                 <option value="葷食" ${catStr === '葷食' ? 'selected' : ''} style="color:#333;">葷食</option>
@@ -1072,76 +1183,78 @@
               </div>
             </td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${statusHtml}</td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasLunch ? 'checked' : ''} onchange="updateMeal('${emp.empId}', this.checked, ${emp.hasDinner})"></td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasDinner ? 'checked' : ''} onchange="updateMeal('${emp.empId}', ${emp.hasLunch}, this.checked)"></td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasLunch ? 'checked' : ''} onchange="updateMeal(this, '${emp.empId}', 'lunch')"></td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasDinner ? 'checked' : ''} onchange="updateMeal(this, '${emp.empId}', 'dinner')"></td>
           `;
         return tr;
       };
 
-      if (currentFilterStatus === 'all') {
-        if (absentEmps.length > 0) {
+      if (!skipTbody) {
+        if (currentFilterStatus === 'all') {
+          if (absentEmps.length > 0) {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,69,58,0.08); color: var(--color-red); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">未打卡人員 (${absentEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            absentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+          }
+
+          if (leaveEmps.length > 0) {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">請假中人員 (${leaveEmps.length} 人)</td>`;
+            tbody.appendChild(h);
+            leaveEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+          }
+
+          if (presentEmps.length > 0) {
+            const h = document.createElement('tr');
+            h.innerHTML = `<td colspan="${colspanValue}" style="color: var(--text-secondary); padding: 20px 15px; text-align: center; font-style: italic; background: rgba(0,0,0,0.02);">💡 已隱藏 ${presentEmps.length} 名「已打卡人員」。若需查看或修改，請點擊上方綠色的「已打卡」卡片。</td>`;
+            tbody.appendChild(h);
+          }
+        } else if (currentFilterStatus === 'absent') {
           const h = document.createElement('tr');
           h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,69,58,0.08); color: var(--color-red); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">未打卡人員 (${absentEmps.length} 人)</td>`;
           tbody.appendChild(h);
           absentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-        }
-
-        if (leaveEmps.length > 0) {
+        } else if (currentFilterStatus === 'leave') {
           const h = document.createElement('tr');
           h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">請假中人員 (${leaveEmps.length} 人)</td>`;
           tbody.appendChild(h);
           leaveEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-        }
-
-        if (presentEmps.length > 0) {
+        } else if (currentFilterStatus === 'present') {
           const h = document.createElement('tr');
-          h.innerHTML = `<td colspan="${colspanValue}" style="color: var(--text-secondary); padding: 20px 15px; text-align: center; font-style: italic; background: rgba(0,0,0,0.02);">💡 已隱藏 ${presentEmps.length} 名「已打卡人員」。若需查看或修改，請點擊上方綠色的「已打卡」卡片。</td>`;
+          h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(48,209,88,0.08); color: var(--color-green); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">已打卡人員 (${presentEmps.length} 人)</td>`;
           tbody.appendChild(h);
+          presentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'lunch') {
+          const h = document.createElement('tr');
+          h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(10,132,255,0.08); color: var(--color-blue); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日午餐名單 (${lunchEmps.length} 人)</td>`;
+          tbody.appendChild(h);
+          lunchEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'dinner') {
+          const h = document.createElement('tr');
+          h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 (${dinnerEmps.length} 人)</td>`;
+          tbody.appendChild(h);
+          dinnerEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus.startsWith('lunch-')) {
+          const diet = currentFilterStatus.split('-')[1];
+          const filteredEmps = lunchEmps.filter(e => e.dietType === diet);
+          const h = document.createElement('tr');
+          h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(10,132,255,0.08); color: var(--color-blue); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日午餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
+          tbody.appendChild(h);
+          filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus.startsWith('dinner-')) {
+          const diet = currentFilterStatus.split('-')[1];
+          const filteredEmps = dinnerEmps.filter(e => e.dietType === diet);
+          const h = document.createElement('tr');
+          h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
+          tbody.appendChild(h);
+          filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
+        } else if (currentFilterStatus === 'ramadan') {
+          const h = document.createElement('tr');
+          h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(175,82,222,0.08); color: var(--color-purple, #af52de); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">齋戒人員名單 (${ramadanEmps.length} 人)</td>`;
+          tbody.appendChild(h);
+          ramadanEmps.forEach(emp => tbody.appendChild(createRow(emp)));
         }
-      } else if (currentFilterStatus === 'absent') {
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,69,58,0.08); color: var(--color-red); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">未打卡人員 (${absentEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        absentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus === 'leave') {
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">請假中人員 (${leaveEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        leaveEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus === 'present') {
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(48,209,88,0.08); color: var(--color-green); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">已打卡人員 (${presentEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        presentEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus === 'lunch') {
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(10,132,255,0.08); color: var(--color-blue); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日午餐名單 (${lunchEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        lunchEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus === 'dinner') {
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 (${dinnerEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        dinnerEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus.startsWith('lunch-')) {
-        const diet = currentFilterStatus.split('-')[1];
-        const filteredEmps = lunchEmps.filter(e => e.dietType === diet);
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(10,132,255,0.08); color: var(--color-blue); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日午餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus.startsWith('dinner-')) {
-        const diet = currentFilterStatus.split('-')[1];
-        const filteredEmps = dinnerEmps.filter(e => e.dietType === diet);
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(255,159,10,0.08); color: var(--color-orange); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">今日晚餐名單 - ${diet} (${filteredEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        filteredEmps.forEach(emp => tbody.appendChild(createRow(emp)));
-      } else if (currentFilterStatus === 'ramadan') {
-        const h = document.createElement('tr');
-        h.innerHTML = `<td colspan="${colspanValue}" style="background: rgba(175,82,222,0.08); color: var(--color-purple, #af52de); font-weight: bold; padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--glass-border);">齋戒人員名單 (${ramadanEmps.length} 人)</td>`;
-        tbody.appendChild(h);
-        ramadanEmps.forEach(emp => tbody.appendChild(createRow(emp)));
       }
 
       document.getElementById('val-present').innerText = presentCount;
@@ -1170,7 +1283,7 @@
 
       document.getElementById('meal-summary').innerHTML = `
           <div style="${lunchBoxStyle}">
-            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-blue); cursor: pointer;" onclick="setFilter('lunch')">🍱 午餐總計: ${lunchTotal} 個</div>
+            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-blue); cursor: pointer;" onclick="setFilter('lunch')">🍱 ${divPrefix}午餐總計: ${lunchTotal} 個</div>
             <div style="color: var(--text-secondary); line-height: 1.6;">
               <span style="${getLunchStyle('lunch-葷食')}" onclick="setFilter('lunch-葷食')">葷食: <strong>${counts.lunch['葷食']}</strong></span> | 
               <span style="${getLunchStyle('lunch-素食')}" onclick="setFilter('lunch-素食')">素食: <strong>${counts.lunch['素食']}</strong></span> | 
@@ -1181,7 +1294,7 @@
             </div>
           </div>
           <div style="${dinnerBoxStyle}">
-            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-orange); cursor: pointer;" onclick="setFilter('dinner')">🌙 晚餐總計: ${dinnerTotal} 個</div>
+            <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-orange); cursor: pointer;" onclick="setFilter('dinner')">🌙 ${divPrefix}晚餐總計: ${dinnerTotal} 個</div>
             <div style="color: var(--text-secondary); line-height: 1.6;">
               <span style="${getDinnerStyle('dinner-葷食')}" onclick="setFilter('dinner-葷食')">葷食: <strong>${counts.dinner['葷食']}</strong></span> | 
               <span style="${getDinnerStyle('dinner-素食')}" onclick="setFilter('dinner-素食')">素食: <strong>${counts.dinner['素食']}</strong></span> | 
@@ -1205,15 +1318,24 @@
         `;
     }
 
-    async function updateMeal(empId, hasLunch, hasDinner) {
+    async function updateMeal(element, empId, mealType) {
       if (!checkPassword()) {
-        renderTable();
+        element.checked = !element.checked; // revert
         return;
       }
       const emp = allEmployeesData.find(e => String(e.empId) === String(empId));
       if (emp) {
-        emp.hasLunch = hasLunch;
-        emp.hasDinner = hasDinner;
+        if (mealType === 'lunch') emp.hasLunch = element.checked;
+        if (mealType === 'dinner') emp.hasDinner = element.checked;
+
+        // Immediately save to backend for real-time sync
+        try {
+          fetch('/api/meals/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId: emp.empId, hasLunch: emp.hasLunch, hasDinner: emp.hasDinner })
+          });
+        } catch (e) { }
       }
 
       const btnPrint = document.getElementById('btn-print');
@@ -1222,7 +1344,25 @@
         btnPrint.style.opacity = '0.5';
         btnPrint.style.cursor = 'not-allowed';
       }
-      renderTable();
+      renderTable(true); // pass skipTbody = true to avoid jumping
+    }
+
+    async function updateDivision(empId, division) {
+      if (!checkPassword()) return;
+      const emp = allEmployeesData.find(e => String(e.empId) === String(empId));
+      if (emp) {
+        emp.division = division === '未分類' ? null : division;
+      }
+      try {
+        await fetch('/api/employees/division', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ empId, division })
+        });
+      } catch (err) {
+        alert('事業部更新失敗: ' + err.message);
+      }
+      renderTable(true);
     }
 
     async function saveAllMeals() {
@@ -1347,6 +1487,11 @@
     }
 
     async function backendPrint() {
+      if (typeof currentDivision !== 'undefined' && currentDivision === 'all') {
+        alert('請先在畫面上方切換至「皮革」或「紡織」等單一事業部，才能進行列印！');
+        return;
+      }
+
       const btn = document.querySelector('button[onclick="backendPrint()"]');
       if (!btn) return;
 
@@ -1390,9 +1535,17 @@
                     <title>今日訂餐清單</title>
                     <style>
                         ${styles}
-                        body { background: white; padding: 20px; font-family: sans-serif; }
+                        body { background: white; padding: 20px; font-family: sans-serif; height: auto !important; }
                         .no-print { display: none !important; }
                         .print-only { display: block !important; }
+                        /* Ensure full content prints across pages */
+                        .table-container, .card, .main-content, .app-container, .tab-content { 
+                            overflow: visible !important; 
+                            height: auto !important; 
+                            max-height: none !important; 
+                        }
+                        table { page-break-inside: auto; }
+                        tr { page-break-inside: avoid; page-break-after: auto; }
                     </style>
                 </head>
                 <body>
@@ -1429,6 +1582,41 @@
       const yStr = yesterday.toISOString().split('T')[0];
       document.getElementById('q-start-date').value = yStr;
       document.getElementById('q-end-date').value = yStr;
+
+      // Real-time synchronization (SSE)
+      const evtSource = new EventSource('/api/events');
+      evtSource.onmessage = function (e) {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'connected') return;
+
+          // If settings changed, we should probably reload them but don't need to disrupt UI
+          if (data.type === 'settings_changed') {
+            // For now just ignore or optionally reload settings
+            return;
+          }
+
+          const pl = data.payload;
+          const emp = allEmployeesData.find(e => String(e.empId) === String(pl.empId));
+          if (emp) {
+            if (data.type === 'meal_toggled') {
+              emp.hasLunch = pl.hasLunch;
+              emp.hasDinner = pl.hasDinner;
+            } else if (data.type === 'diet_changed') {
+              emp.dietType = pl.dietType;
+            } else if (data.type === 'optout_changed') {
+              emp.optOutLunch = pl.optOutLunch;
+              emp.optOutDinner = pl.optOutDinner;
+              emp.noHolidayAllowance = pl.noHolidayAllowance;
+            } else if (data.type === 'division_changed') {
+              emp.division = pl.division;
+            }
+            renderTable(true); // update counts and UI without breaking inputs
+          }
+        } catch (err) {
+          console.error("SSE parse error", err);
+        }
+      };
     });
 
     async function executeQuery() {

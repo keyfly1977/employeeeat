@@ -55,6 +55,8 @@ db.serialize(() => {
     db.run(`ALTER TABLE employees ADD COLUMN is_returning_home INTEGER DEFAULT 0`, (err) => {});
     db.run(`ALTER TABLE employees ADD COLUMN return_home_start TEXT`, (err) => {});
     db.run(`ALTER TABLE employees ADD COLUMN return_home_end TEXT`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN nationality TEXT`, (err) => {});
+    db.run(`ALTER TABLE employees ADD COLUMN division TEXT`, (err) => {});
 
     // 初始化預設設定
     const defaultSettings = {

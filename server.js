@@ -36,6 +36,34 @@ let cachedData = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
+// Server-Sent Events (SSE) setup for real-time collaboration
+const sseClients = new Set();
+function broadcastEvent(type, payload) {
+    const data = `data: ${JSON.stringify({ type, payload })}\n\n`;
+    for (const client of sseClients) {
+        try {
+            client.write(data);
+        } catch (err) {
+            sseClients.delete(client);
+        }
+    }
+}
+
+app.get('/api/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders(); // flush headers to establish SSE
+
+    // Send initial connection event
+    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+
+    sseClients.add(res);
+    req.on('close', () => {
+        sseClients.delete(res);
+    });
+});
+
 // Check if credentials are configured
 function isConfigured() {
   return config.CO_ID && config.USER_ACCOUNT && config.USER_PWD;
@@ -196,12 +224,14 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
     const optOutLunchMap = {};
     const optOutDinnerMap = {};
     const noHolidayAllowanceMap = {};
+    const divisionMap = {};
     if (dbEmps) {
         dbEmps.forEach(e => {
             dietMap[e.emp_id] = e.diet_type;
             optOutLunchMap[e.emp_id] = e.opt_out_lunch === 1;
             optOutDinnerMap[e.emp_id] = e.opt_out_dinner === 1;
             noHolidayAllowanceMap[e.emp_id] = e.no_holiday_allowance === 1;
+            divisionMap[e.emp_id] = e.division;
         });
     }
 
@@ -312,12 +342,27 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             hasDinner = localRec.has_dinner === 1;
         }
 
+        const deptStr = emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配';
+        
+        let finalDivision = '其他';
+        const manualDiv = divisionMap[emp.EMP_ID];
+        if (manualDiv) {
+            finalDivision = manualDiv;
+        } else if (emp.EMP_NO) {
+            if (emp.EMP_NO.startsWith('T1') || emp.EMP_NO.startsWith('T2')) finalDivision = '皮革';
+            else if (emp.EMP_NO.startsWith('T4')) finalDivision = '紡織';
+            else {
+                if (deptStr.includes('皮')) finalDivision = '皮革';
+                else if (deptStr.includes('紡')) finalDivision = '紡織';
+            }
+        }
+
         return {
             date: targetDateStr,
             empId: emp.EMP_ID,
             empNo: emp.EMP_NO,
             name: emp.EMP_NAME,
-            deptName: emp.DEPT5_NAME || emp.DEPT4_NAME || emp.DEPT3_NAME || emp.DEPT2_NAME || emp.DEPT1_NAME || emp.DEPT_NAME || '未分配',
+            deptName: deptStr,
             status,
             cardTime,
             leaveInfo: leave ? {
@@ -335,7 +380,8 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             hasDinner,
             hasOt: !!ot,
             otHours: otHoursVal,
-            isRestOvertime: isRestOvertime
+            isRestOvertime: isRestOvertime,
+            division: finalDivision
         };
     });
 
@@ -406,7 +452,7 @@ app.get('/api/meals/today', async (req, res) => {
     });
 
     const dbEmps = await new Promise((resolve) => {
-        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, no_holiday_allowance FROM employees`, (err, rows) => {
+        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, no_holiday_allowance, division FROM employees`, (err, rows) => {
             resolve(rows || []);
         });
     });
@@ -478,6 +524,18 @@ app.get('/api/meals/today', async (req, res) => {
   }
 });
 
+// Update employee division
+app.post('/api/employees/division', (req, res) => {
+    const { empId, division } = req.body;
+    const finalDiv = division === '未分類' ? null : division;
+    db.run(`UPDATE employees SET division = ? WHERE emp_id = ?`, [finalDiv, empId], function(err) {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        cachedData = null;
+        broadcastEvent('division_changed', { empId, division: finalDiv });
+        res.json({ success: true });
+    });
+});
+
 // Update employee diet
 app.post('/api/employees/diet', (req, res) => {
     const { empId, dietType } = req.body;
@@ -486,6 +544,7 @@ app.post('/api/employees/diet', (req, res) => {
             return res.status(500).json({ success: false, error: err.message });
         }
         cachedData = null; // Invalidate cache
+        broadcastEvent('diet_changed', { empId, dietType });
         res.json({ success: true });
     });
 });
@@ -499,6 +558,7 @@ app.post('/api/employees/optout', (req, res) => {
         function(err) {
             if (err) return res.status(500).json({ success: false, error: err.message });
             cachedData = null;
+            broadcastEvent('optout_changed', { empId, optOutLunch, optOutDinner, noHolidayAllowance });
             res.json({ success: true });
         }
     );
@@ -545,6 +605,7 @@ app.post('/api/meals/update', (req, res) => {
                     return res.status(500).json({ success: false, error: err.message });
                 }
                 cachedData = null; // Invalidate cache
+                broadcastEvent('meal_toggled', { empId, hasLunch, hasDinner });
                 res.json({ success: true });
             });
 });
@@ -613,6 +674,7 @@ app.post('/api/settings', (req, res) => {
             stmt.run(key, value);
         }
         stmt.finalize(() => {
+            broadcastEvent('settings_changed', settings);
             res.json({ success: true });
         });
     });
