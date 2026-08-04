@@ -479,6 +479,17 @@
                     style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
                 </td>
               </tr>
+              <tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:8px 6px; text-align:center;"><span
+                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
+                    加項</span></td>
+                <td style="padding:8px 6px;"><input type="text" id="fr-special-label" placeholder="例：特殊日補貼(返鄉/請假/假日休息)"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+                <td style="padding:8px 6px;"><input type="number" id="set-fr-special" required placeholder="100"
+                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
+                </td>
+              </tr>
               <tr>
                 <td style="padding:8px 6px; text-align:center;"><span
                     style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖
@@ -571,9 +582,13 @@
       <section class="card"
         style="flex: 2; min-width: 600px; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow);">
         <h2 style="margin-top: 0; margin-bottom: 20px;">👥 外籍員工津貼例外設定</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 20px;">
-          若外籍員工為「無住宿」或「短暫返鄉」，請在此勾選，該期間結算將「不發放」任何假日津貼與發餐費底數。
-        </p>
+        <div style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6;">
+          目前系統針對外籍員工特殊狀態的計算邏輯如下：
+          <ul style="margin-top: 8px; padding-left: 20px;">
+            <li><strong>無住宿：</strong>不影響金額計算，僅會在結算報表備註欄標示「無住宿」。</li>
+            <li><strong>返鄉中：</strong>在設定的日期區間內，暫停一般餐補與加班津貼，改為每天發放「特殊日補貼」(預設100元)。<br>※ 發餐費底數(預設300元)仍維持全額發放。</li>
+          </ul>
+        </div>
         <div class="table-container" style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;">
             <thead>
@@ -581,7 +596,7 @@
                 style="color: var(--text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: var(--glass-bg); z-index: 2; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05);">人員 (工號/姓名)</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">無住宿 (不發津貼)</th>
+                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">無住宿</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉中</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉區間 (開始 ~ 結束)</th>
               </tr>
@@ -741,6 +756,7 @@
       document.getElementById('set-tw-base').value = data.taiwanese_base_allowance || 300;
       document.getElementById('set-fr-base').value = data.foreign_base_allowance || 300;
       document.getElementById('set-fr-allowance').value = data.foreign_allowance || 0;
+      document.getElementById('set-fr-special').value = data.foreign_holiday_no_ot_allowance || 100;
       document.getElementById('set-ramadan-start').value = data.ramadan_start || '2026-02-18';
       document.getElementById('set-ramadan-end').value = data.ramadan_end || '2026-03-19';
       // Labels
@@ -750,6 +766,7 @@
       document.getElementById('fr-base-label').value = data.fr_base_label || '發餐費底數';
       document.getElementById('fr-allowance-label').value = data.fr_allowance_label || '伙食津貼';
       document.getElementById('fr-deduct-label').value = data.fr_deduct_label || '應扣伙食費';
+      document.getElementById('fr-special-label').value = data.fr_special_label || '特殊日補貼(返鄉/請假/假日休息)';
       document.getElementById('ot4-label').value = data.ot4_label || '平日加班 >=4hr';
       document.getElementById('ot8-label').value = data.ot8_label || '假日加班 >=8hr';
       document.getElementById('ot10-label').value = data.ot10_label || '假日加班 >=10hr';
@@ -808,7 +825,6 @@
 
         if (type === 'lunch') emp.optOutLunch = isChecked;
         if (type === 'dinner') emp.optOutDinner = isChecked;
-        if (type === 'holiday') emp.noHolidayAllowance = isChecked;
 
         // Also update today's checkbox for immediate feedback
         if (type === 'lunch' && isChecked) {
@@ -843,7 +859,7 @@
         await fetch('/api/employees/optout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ empId, optOutLunch: emp.optOutLunch, optOutDinner: emp.optOutDinner, noHolidayAllowance: emp.noHolidayAllowance })
+          body: JSON.stringify({ empId, optOutLunch: emp.optOutLunch, optOutDinner: emp.optOutDinner })
         });
 
         renderTable(true);
@@ -948,6 +964,7 @@
       currentSettings['taiwanese_base_allowance'] = document.getElementById('set-tw-base').value;
       currentSettings['foreign_base_allowance'] = document.getElementById('set-fr-base').value;
       currentSettings['foreign_allowance'] = document.getElementById('set-fr-allowance').value;
+      currentSettings['foreign_holiday_no_ot_allowance'] = document.getElementById('set-fr-special').value;
       currentSettings['ramadan_start'] = document.getElementById('set-ramadan-start').value;
       currentSettings['ramadan_end'] = document.getElementById('set-ramadan-end').value;
       // Labels
@@ -957,6 +974,7 @@
       currentSettings['fr_base_label'] = document.getElementById('fr-base-label').value;
       currentSettings['fr_allowance_label'] = document.getElementById('fr-allowance-label').value;
       currentSettings['fr_deduct_label'] = document.getElementById('fr-deduct-label').value;
+      currentSettings['fr_special_label'] = document.getElementById('fr-special-label').value;
       currentSettings['ot4_label'] = document.getElementById('ot4-label').value;
       currentSettings['ot8_label'] = document.getElementById('ot8-label').value;
       currentSettings['ot10_label'] = document.getElementById('ot10-label').value;
@@ -1176,9 +1194,6 @@
                 </label>
                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-secondary);">
                   <input type="checkbox" onchange="updateOptOut('${emp.empId}', 'dinner', this.checked)" ${emp.optOutDinner ? 'checked' : ''}> 預設不訂晚餐
-                </label>
-                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-secondary);">
-                  <input type="checkbox" onchange="updateOptOut('${emp.empId}', 'holiday', this.checked)" ${emp.noHolidayAllowance ? 'checked' : ''}> 停發假日津貼
                 </label>
               </div>
             </td>
@@ -1416,6 +1431,7 @@
 
         headerRow1 += `
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應扣伙食費</th>
+            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">${data.labels.special}</th>
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應發津貼</th>
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">一般出勤</th>
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">平日(4h+)</th>
@@ -1430,7 +1446,7 @@
 
         const tbody = document.getElementById('finance-preview-tbody');
         if (data.rows.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="${10 + data.dates.length * 2}" style="text-align:center; padding: 40px; color: var(--text-muted);">此區間無資料或全無訂餐</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="${11 + data.dates.length * 2}" style="text-align:center; padding: 40px; color: var(--text-muted);">此區間無資料或全無訂餐</td></tr>`;
           return;
         }
 
@@ -1462,6 +1478,7 @@
           });
 
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.deduction}</td>`;
+          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.special || 0}</td>`;
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.allowance}</td>`;
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.norm}</td>`;
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.w4}</td>`;
@@ -1607,7 +1624,6 @@
             } else if (data.type === 'optout_changed') {
               emp.optOutLunch = pl.optOutLunch;
               emp.optOutDinner = pl.optOutDinner;
-              emp.noHolidayAllowance = pl.noHolidayAllowance;
             } else if (data.type === 'division_changed') {
               emp.division = pl.division;
             }

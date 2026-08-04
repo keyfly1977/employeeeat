@@ -223,14 +223,12 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
     const dietMap = {};
     const optOutLunchMap = {};
     const optOutDinnerMap = {};
-    const noHolidayAllowanceMap = {};
     const divisionMap = {};
     if (dbEmps) {
         dbEmps.forEach(e => {
             dietMap[e.emp_id] = e.diet_type;
             optOutLunchMap[e.emp_id] = e.opt_out_lunch === 1;
             optOutDinnerMap[e.emp_id] = e.opt_out_dinner === 1;
-            noHolidayAllowanceMap[e.emp_id] = e.no_holiday_allowance === 1;
             divisionMap[e.emp_id] = e.division;
         });
     }
@@ -374,7 +372,6 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             dietType: finalDiet,
             optOutLunch: optOutLunch,
             optOutDinner: optOutDinner,
-            noHolidayAllowance: noHolidayAllowanceMap[emp.EMP_ID] || false,
             nationality: nationalityStr,
             hasLunch,
             hasDinner,
@@ -452,7 +449,7 @@ app.get('/api/meals/today', async (req, res) => {
     });
 
     const dbEmps = await new Promise((resolve) => {
-        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, no_holiday_allowance, division FROM employees`, (err, rows) => {
+        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, division FROM employees`, (err, rows) => {
             resolve(rows || []);
         });
     });
@@ -552,13 +549,13 @@ app.post('/api/employees/diet', (req, res) => {
 // Update employee meal opt-out defaults
 // Update employee manual meal opt-out defaults
 app.post('/api/employees/optout', (req, res) => {
-    const { empId, optOutLunch, optOutDinner, noHolidayAllowance } = req.body;
-    db.run(`UPDATE employees SET opt_out_lunch = ?, opt_out_dinner = ?, no_holiday_allowance = ? WHERE emp_id = ?`, 
-        [optOutLunch ? 1 : 0, optOutDinner ? 1 : 0, noHolidayAllowance ? 1 : 0, empId], 
+    const { empId, optOutLunch, optOutDinner } = req.body;
+    db.run(`UPDATE employees SET opt_out_lunch = ?, opt_out_dinner = ? WHERE emp_id = ?`, 
+        [optOutLunch ? 1 : 0, optOutDinner ? 1 : 0, empId], 
         function(err) {
             if (err) return res.status(500).json({ success: false, error: err.message });
             cachedData = null;
-            broadcastEvent('optout_changed', { empId, optOutLunch, optOutDinner, noHolidayAllowance });
+            broadcastEvent('optout_changed', { empId, optOutLunch, optOutDinner });
             res.json({ success: true });
         }
     );
@@ -674,6 +671,7 @@ app.post('/api/settings', (req, res) => {
             stmt.run(key, value);
         }
         stmt.finalize(() => {
+            cachedData = null; // Invalidate cache so new settings apply immediately
             broadcastEvent('settings_changed', settings);
             res.json({ success: true });
         });
@@ -922,6 +920,7 @@ async function getFinanceData(startStr, endStr) {
             name: e.name, 
             dept: e.department, 
             deduction, 
+            special: foreignSpecialSubsidy,
             allowance, 
             norm: e.stats.normal_days, 
             w4: e.stats.weekday_ot_4hr,
@@ -935,7 +934,13 @@ async function getFinanceData(startStr, endStr) {
         rows.push(rowData);
     });
 
-    return { dates, rows };
+    return { 
+        dates, 
+        rows,
+        labels: {
+            special: s['fr_special_label'] || '特殊日補貼(返鄉/請假/假日休息)'
+        }
+    };
 }
 
 
@@ -978,6 +983,7 @@ app.get('/api/export/excel', async (req, res) => {
 
         const baseColumns2 = [
             { key: 'deduction', width: 15 },
+            { key: 'special', width: 15 },
             { key: 'allowance', width: 15 },
             { key: 'norm', width: 15 },
             { key: 'w4', width: 15 },
@@ -1000,7 +1006,7 @@ app.get('/api/export/excel', async (req, res) => {
             row2.push('晚');
         });
 
-        const headers2 = ['應扣伙食費', '應發津貼', '一般出勤(天)', '平日加班4hr+(天)', '假日未加班(天)', '假日加班8hr(天)', '假日加班10hr+(天)', '假日加班12hr+(天)', '備註'];
+        const headers2 = ['應扣伙食費', data.labels.special, '應發津貼', '一般出勤(天)', '平日加班4hr+(天)', '假日未加班(天)', '假日加班8hr(天)', '假日加班10hr+(天)', '假日加班12hr+(天)', '備註'];
         headers2.forEach(h => {
             row1.push(h);
             row2.push(h);
@@ -1037,6 +1043,7 @@ app.get('/api/export/excel', async (req, res) => {
                 name: r.name, 
                 dept: r.dept,
                 deduction: r.deduction,
+                special: r.special,
                 allowance: r.allowance,
                 norm: r.norm,
                 w4: r.w4,
