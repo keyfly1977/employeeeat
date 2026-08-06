@@ -284,6 +284,7 @@
                 style="background: var(--glass-bg); color: var(--text-primary);">🔄 重新整理</button>
               <button id="btn-save-all" onclick="saveAllMeals()" class="btn-primary"
                 style="background: var(--color-blue);">💾 確認儲存</button>
+
               <button id="btn-print" onclick="backendPrint()" class="btn-primary btn-success" disabled
                 style="opacity: 0.5; cursor: not-allowed;">🖨️ 列印</button>
             </div>
@@ -391,7 +392,7 @@
       style="display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; max-width: 1400px; margin: 0 auto;">
       <!-- Left side: Settings Form -->
       <section class="card"
-        style="flex: 1; min-width: 450px; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow);">
+        style="flex: 1 1 400px; min-width: 300px; max-width: 100%; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow); box-sizing: border-box;">
         <h2 style="margin-top: 0; margin-bottom: 25px;">⚙️ 餐費設定 (總務專區)</h2>
 
         <form class="settings-form" id="settings-form" style="width: 100%;">
@@ -401,176 +402,9 @@
             <input type="number" id="set-bento" required>
           </div>
 
-          <h3 style="margin-top: 25px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🇹🇼
-            本國員工加減項名目</h3>
-          <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
-            <thead>
-              <tr style="color:var(--text-muted); font-size:0.85rem; border-bottom:2px solid var(--glass-border);">
-                <th style="padding:8px 6px; width:80px; text-align:center;">類型</th>
-                <th style="padding:8px 6px; text-align:left;">名目名稱</th>
-                <th style="padding:8px 6px; width:130px; text-align:left;">金額 (元/月)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="tw-base-label" placeholder="例：發餐費底數"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-tw-base" required placeholder="1800"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="tw-allowance-label" placeholder="例：伙食津貼"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-tw" required placeholder="300"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖
-                    減項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="tw-deduct-label" placeholder="例：應扣伙食費"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px; color:var(--text-muted); font-size:0.9rem; padding-left:12px;">依便當數計算</td>
-              </tr>
-            </tbody>
-          </table>
 
-          <h3 style="margin-top: 30px; margin-bottom: 12px; font-size: 1.1rem; color: var(--color-primary);">🌏
-            外籍員工加減項名目</h3>
-          <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
-            <thead>
-              <tr style="color:var(--text-muted); font-size:0.85rem; border-bottom:2px solid var(--glass-border);">
-                <th style="padding:8px 6px; width:80px; text-align:center;">類型</th>
-                <th style="padding:8px 6px; text-align:left;">名目名稱</th>
-                <th style="padding:8px 6px; width:130px; text-align:left;">金額 (元/天)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-base-label" placeholder="例：發餐費底數"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-fr-base" required placeholder="300"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-allowance-label" placeholder="例：伙食津貼"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-fr-allowance" required placeholder="0"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-special-label" placeholder="例：特殊日補貼(返鄉/請假/假日休息)"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-fr-special" required placeholder="100"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(255,69,58,0.15);color:var(--color-red);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➖
-                    減項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="fr-deduct-label" placeholder="例：應扣伙食費"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px; color:var(--text-muted); font-size:0.9rem; padding-left:12px;">依便當數計算</td>
-              </tr>
-            </tbody>
-          </table>
 
-          <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.1rem;">⏱️ 加班補貼名目 (本外勞通用)</h3>
-          <table
-            style="width:100%; border-collapse:collapse; background:rgba(255,255,255,0.4); border-radius:10px; overflow:hidden;">
-            <thead style="background:rgba(255,255,255,0.6);">
-              <tr>
-                <th style="padding:8px 6px; width:60px; text-align:center;">類型</th>
-                <th style="padding:8px 6px; text-align:left;">報表顯示名稱</th>
-                <th style="padding:8px 6px; width:130px; text-align:left;">金額 (元/天)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot4-label" placeholder="例：平日加班 >=4hr"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot4" required placeholder="75"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot8-label" placeholder="例：假日加班 >=8hr"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot8" required placeholder="75"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--glass-border);">
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot10-label" placeholder="例：假日加班 >=10hr"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot10" required placeholder="150"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:8px 6px; text-align:center;"><span
-                    style="background:rgba(48,209,88,0.15);color:var(--color-green);padding:2px 8px;border-radius:10px;font-size:0.8rem;white-space:nowrap;">➕
-                    加項</span></td>
-                <td style="padding:8px 6px;"><input type="text" id="ot12-label" placeholder="例：假日加班 >=12hr"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-                <td style="padding:8px 6px;"><input type="number" id="set-ot12" required placeholder="225"
-                    style="width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(255,255,255,0.6);font-size:0.95rem;">
-                </td>
-              </tr>
-            </tbody>
-          </table>
 
-          <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.1rem;">📅 齋戒月自動化設定</h3>
-          <div style="display: flex; gap: 15px;">
-            <div class="form-group" style="flex: 1;">
-              <label>齋戒月開始日期</label>
-              <input type="date" id="set-ramadan-start">
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label>齋戒月結束日期</label>
-              <input type="date" id="set-ramadan-end">
-            </div>
-          </div>
 
           <div style="margin-top: 30px; text-align: right;">
             <button type="submit" class="btn-primary">儲存設定</button>
@@ -580,30 +414,31 @@
 
       <!-- Right side: Employee Management UI -->
       <section class="card"
-        style="flex: 2; min-width: 600px; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 30px; box-shadow: var(--glass-shadow);">
-        <h2 style="margin-top: 0; margin-bottom: 20px;">👥 外籍員工津貼例外設定</h2>
+        style="flex: 2 1 600px; min-width: 300px; max-width: 100%; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 20px; box-shadow: var(--glass-shadow); box-sizing: border-box;">
+        <h2 style="margin-top: 0; margin-bottom: 20px;">👥 外籍員工狀態設定</h2>
         <div style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6;">
-          目前系統針對外籍員工特殊狀態的計算邏輯如下：
+          目前系統針對外籍員工特殊狀態的備註功能：
           <ul style="margin-top: 8px; padding-left: 20px;">
-            <li><strong>無住宿：</strong>不影響金額計算，僅會在結算報表備註欄標示「無住宿」。</li>
-            <li><strong>返鄉中：</strong>在設定的日期區間內，暫停一般餐補與加班津貼，改為每天發放「特殊日補貼」(預設100元)。<br>※ 發餐費底數(預設300元)仍維持全額發放。</li>
+            <li><strong>無住宿 / 返鄉中：</strong>僅會在結算報表備註欄標示，供參考。</li>
           </ul>
         </div>
-        <div class="table-container" style="overflow-x: auto;">
+        <div class="table-container" style="overflow-x: auto; width: 100%; max-width: 100%;">
           <table style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;">
             <thead>
               <tr
-                style="color: var(--text-muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: var(--glass-bg); z-index: 2; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05);">人員 (工號/姓名)</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">無住宿</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉中</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">返鄉區間 (開始 ~ 結束)</th>
+                style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th
+                  style="padding: 8px 4px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: var(--glass-bg); z-index: 2; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space: nowrap; min-width: 90px;">
+                  人員 (工號/姓名)</th>
+                <th style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">無住宿</th>
+                <th style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">返鄉中</th>
+                <th style="padding: 4px; border-bottom: 1px solid var(--glass-border);">返鄉區間</th>
+                <th style="padding: 4px; border-bottom: 1px solid var(--glass-border);">齋戒月區間</th>
               </tr>
             </thead>
-            <tbody id="employee-hr-tbody" style="font-size: 1.05rem;">
+            <tbody id="employee-hr-tbody" style="font-size: 1rem;">
               <tr>
-                <td colspan="4" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td>
+                <td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td>
               </tr>
             </tbody>
           </table>
@@ -661,6 +496,27 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Inline Cross Check Result -->
+        <div id="crossCheckResult" style="display: none; margin-top: 30px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+          <h3 style="color: #e67e22; margin-top: 0;">⚠️ 防弊比對異常報告</h3>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">比對「已預報晚餐」與「HR 實際打卡加班時數」，揪出異常紀錄。</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="padding: 10px; border: 1px solid #dee2e6;">日期</th>
+                <th style="padding: 10px; border: 1px solid #dee2e6;">工號</th>
+                <th style="padding: 10px; border: 1px solid #dee2e6;">姓名</th>
+                <th style="padding: 10px; border: 1px solid #dee2e6;">HR加班時數</th>
+                <th style="padding: 10px; border: 1px solid #dee2e6;">預報晚餐</th>
+                <th style="padding: 10px; border: 1px solid #dee2e6;">異常類型</th>
+              </tr>
+            </thead>
+            <tbody id="crossCheckTbody">
+              <!-- 結果注入處 -->
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   </div>
@@ -711,7 +567,18 @@
     </div>
   </div>
 
+
   <script>
+    function formatROCDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const rocY = d.getFullYear() - 1911;
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${rocY}/${mm}/${dd}`;
+    }
+
     let adminUnlocked = false;
     function switchTab(tabId) {
       if (tabId === 'admin' && !adminUnlocked) {
@@ -729,11 +596,13 @@
       if (tabId === 'admin') {
         loadSettings();
         loadHREmployees();
+      } else if (tabId === 'guard') {
+        loadMeals();
       }
     }
 
     const today = new Date();
-    document.getElementById('print-date').innerText = today.toLocaleDateString('zh-TW');
+    document.getElementById('print-date').innerText = formatROCDate(today);
 
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -748,29 +617,7 @@
       currentSettings = data;
 
       document.getElementById('set-bento').value = data.bento_price || 60;
-      document.getElementById('set-tw').value = data.taiwanese_meal_allowance || 1800;
-      document.getElementById('set-ot4').value = data.universal_weekday_ot_4hr_allowance || 75;
-      document.getElementById('set-ot8').value = data.universal_holiday_ot_8hr_allowance || 75;
-      document.getElementById('set-ot10').value = data.universal_holiday_ot_10hr_allowance || 150;
-      document.getElementById('set-ot12').value = data.universal_holiday_ot_12hr_allowance || 225;
-      document.getElementById('set-tw-base').value = data.taiwanese_base_allowance || 300;
-      document.getElementById('set-fr-base').value = data.foreign_base_allowance || 300;
-      document.getElementById('set-fr-allowance').value = data.foreign_allowance || 0;
-      document.getElementById('set-fr-special').value = data.foreign_holiday_no_ot_allowance || 100;
-      document.getElementById('set-ramadan-start').value = data.ramadan_start || '2026-02-18';
-      document.getElementById('set-ramadan-end').value = data.ramadan_end || '2026-03-19';
-      // Labels
-      document.getElementById('tw-base-label').value = data.tw_base_label || '發餐費底數';
-      document.getElementById('tw-allowance-label').value = data.tw_allowance_label || '伙食津貼';
-      document.getElementById('tw-deduct-label').value = data.tw_deduct_label || '應扣伙食費';
-      document.getElementById('fr-base-label').value = data.fr_base_label || '發餐費底數';
-      document.getElementById('fr-allowance-label').value = data.fr_allowance_label || '伙食津貼';
-      document.getElementById('fr-deduct-label').value = data.fr_deduct_label || '應扣伙食費';
-      document.getElementById('fr-special-label').value = data.fr_special_label || '特殊日補貼(返鄉/請假/假日休息)';
-      document.getElementById('ot4-label').value = data.ot4_label || '平日加班 >=4hr';
-      document.getElementById('ot8-label').value = data.ot8_label || '假日加班 >=8hr';
-      document.getElementById('ot10-label').value = data.ot10_label || '假日加班 >=10hr';
-      document.getElementById('ot12-label').value = data.ot12_label || '假日加班 >=12hr';
+
     }
 
     let isGuardUnlocked = false;
@@ -877,28 +724,44 @@
         if (!hrTbody) return;
         hrTbody.innerHTML = '';
         if (foreignEmps.length === 0) {
-          hrTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-muted);">無外籍員工資料</td></tr>';
+          hrTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">無外籍員工</td></tr>';
           return;
         }
         foreignEmps.forEach(emp => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: rgba(255,255,255,0.85); z-index: 1; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
-              <div style="font-weight: 600;">${emp.name}</div>
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">${emp.emp_no || emp.emp_id}</div>
+            <td style="padding: 8px 4px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: rgba(255,255,255,0.95); z-index: 1; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space: nowrap; min-width: 90px;">
+              <div style="font-weight: 600; font-size: 1.1rem;">${emp.name}</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);">${emp.emp_no || emp.emp_id}</div>
             </td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.department || '未分配'}</td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); text-align: center;">
-              <input type="checkbox" class="hr-noacc-checkbox" data-empid="${emp.emp_id}" ${emp.no_accommodation === 1 ? 'checked' : ''} style="transform: scale(1.5); cursor: pointer; accent-color: var(--color-primary);">
+            <td style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">
+              <input type="checkbox" class="hr-noacc-checkbox" data-empid="${emp.emp_id}" ${emp.no_accommodation === 1 ? 'checked' : ''} style="transform: scale(1.3); cursor: pointer; accent-color: var(--color-primary);">
             </td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); text-align: center;">
-              <input type="checkbox" class="hr-home-checkbox" data-empid="${emp.emp_id}" ${emp.is_returning_home === 1 ? 'checked' : ''} style="transform: scale(1.5); cursor: pointer; accent-color: var(--color-primary);">
+            <td style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">
+              <input type="checkbox" class="hr-home-checkbox" data-empid="${emp.emp_id}" ${emp.is_returning_home === 1 ? 'checked' : ''} style="transform: scale(1.3); cursor: pointer; accent-color: var(--color-primary);">
             </td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">
-              <div style="display: flex; gap: 5px; align-items: center; justify-content: flex-start; ${emp.is_returning_home === 1 ? '' : 'opacity: 0.3; pointer-events: none;'}" id="home-dates-${emp.emp_id}">
-                <input type="date" class="hr-date-input" data-empid="${emp.emp_id}" data-type="start" value="${emp.return_home_start || ''}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
-                <span>~</span>
-                <input type="date" class="hr-date-input" data-empid="${emp.emp_id}" data-type="end" value="${emp.return_home_end || ''}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+            <td style="padding: 4px; border-bottom: 1px solid var(--glass-border);">
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; justify-content: center; ${emp.is_returning_home === 1 ? '' : 'opacity: 0.3; pointer-events: none;'}" id="home-dates-${emp.emp_id}">
+                <div style="display: flex; align-items: center; gap: 2px;">
+                  <span style="font-size: 0.85rem; color: #666;">起</span>
+                  <input type="date" class="hr-date-input" data-empid="${emp.emp_id}" data-type="start" value="${emp.return_home_start || ''}" style="padding: 4px 2px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; width: 115px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 2px;">
+                  <span style="font-size: 0.85rem; color: #666;">迄</span>
+                  <input type="date" class="hr-date-input" data-empid="${emp.emp_id}" data-type="end" value="${emp.return_home_end || ''}" style="padding: 4px 2px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; width: 115px;">
+                </div>
+              </div>
+            </td>
+            <td style="padding: 4px; border-bottom: 1px solid var(--glass-border);">
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; justify-content: center;">
+                <div style="display: flex; align-items: center; gap: 2px;">
+                  <span style="font-size: 0.85rem; color: #666;">起</span>
+                  <input type="date" class="hr-ramadan-input" data-empid="${emp.emp_id}" data-type="start" value="${emp.ramadan_start || ''}" style="padding: 4px 2px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; width: 115px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 2px;">
+                  <span style="font-size: 0.85rem; color: #666;">迄</span>
+                  <input type="date" class="hr-ramadan-input" data-empid="${emp.emp_id}" data-type="end" value="${emp.ramadan_end || ''}" style="padding: 4px 2px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; width: 115px;">
+                </div>
               </div>
             </td>
           `;
@@ -910,11 +773,15 @@
           const homeCb = document.querySelector(`.hr-home-checkbox[data-empid="${empId}"]`);
           const startInput = document.querySelector(`.hr-date-input[data-empid="${empId}"][data-type="start"]`);
           const endInput = document.querySelector(`.hr-date-input[data-empid="${empId}"][data-type="end"]`);
+          const ramadanStartInput = document.querySelector(`.hr-ramadan-input[data-empid="${empId}"][data-type="start"]`);
+          const ramadanEndInput = document.querySelector(`.hr-ramadan-input[data-empid="${empId}"][data-type="end"]`);
 
           const noAcc = noAccCb ? (noAccCb.checked ? 1 : 0) : 0;
           const isHome = homeCb ? (homeCb.checked ? 1 : 0) : 0;
           const startStr = startInput ? startInput.value : '';
           const endStr = endInput ? endInput.value : '';
+          const rStartStr = ramadanStartInput ? ramadanStartInput.value : '';
+          const rEndStr = ramadanEndInput ? ramadanEndInput.value : '';
 
           const dateContainer = document.getElementById(`home-dates-${empId}`);
           if (dateContainer) {
@@ -935,7 +802,9 @@
                 no_accommodation: noAcc,
                 is_returning_home: isHome,
                 return_home_start: startStr,
-                return_home_end: endStr
+                return_home_end: endStr,
+                ramadan_start: rStartStr,
+                ramadan_end: rEndStr
               })
             });
             if (!resp.ok) throw new Error('Update failed');
@@ -948,6 +817,7 @@
         document.querySelectorAll('.hr-noacc-checkbox').forEach(cb => cb.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
         document.querySelectorAll('.hr-home-checkbox').forEach(cb => cb.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
         document.querySelectorAll('.hr-date-input').forEach(inp => inp.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
+        document.querySelectorAll('.hr-ramadan-input').forEach(inp => inp.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
       } catch (err) {
         console.error("Failed to load HR employees:", err);
       }
@@ -956,29 +826,8 @@
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       currentSettings['bento_price'] = document.getElementById('set-bento').value;
-      currentSettings['taiwanese_meal_allowance'] = document.getElementById('set-tw').value;
-      currentSettings['universal_weekday_ot_4hr_allowance'] = document.getElementById('set-ot4').value;
-      currentSettings['universal_holiday_ot_8hr_allowance'] = document.getElementById('set-ot8').value;
-      currentSettings['universal_holiday_ot_10hr_allowance'] = document.getElementById('set-ot10').value;
-      currentSettings['universal_holiday_ot_12hr_allowance'] = document.getElementById('set-ot12').value;
-      currentSettings['taiwanese_base_allowance'] = document.getElementById('set-tw-base').value;
-      currentSettings['foreign_base_allowance'] = document.getElementById('set-fr-base').value;
-      currentSettings['foreign_allowance'] = document.getElementById('set-fr-allowance').value;
-      currentSettings['foreign_holiday_no_ot_allowance'] = document.getElementById('set-fr-special').value;
-      currentSettings['ramadan_start'] = document.getElementById('set-ramadan-start').value;
-      currentSettings['ramadan_end'] = document.getElementById('set-ramadan-end').value;
-      // Labels
-      currentSettings['tw_base_label'] = document.getElementById('tw-base-label').value;
-      currentSettings['tw_allowance_label'] = document.getElementById('tw-allowance-label').value;
-      currentSettings['tw_deduct_label'] = document.getElementById('tw-deduct-label').value;
-      currentSettings['fr_base_label'] = document.getElementById('fr-base-label').value;
-      currentSettings['fr_allowance_label'] = document.getElementById('fr-allowance-label').value;
-      currentSettings['fr_deduct_label'] = document.getElementById('fr-deduct-label').value;
-      currentSettings['fr_special_label'] = document.getElementById('fr-special-label').value;
-      currentSettings['ot4_label'] = document.getElementById('ot4-label').value;
-      currentSettings['ot8_label'] = document.getElementById('ot8-label').value;
-      currentSettings['ot10_label'] = document.getElementById('ot10-label').value;
-      currentSettings['ot12_label'] = document.getElementById('ot12-label').value;
+
+
 
       await fetch('/api/settings', {
         method: 'POST',
@@ -1070,7 +919,7 @@
 
       // Set title with date
       const divPrefix = currentDivision === 'all' ? '' : (currentDivision === '其他' ? '未分' : currentDivision);
-      const todayDateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const todayDateStr = formatROCDate(new Date());
       document.getElementById('list-title').innerHTML = `📋 ${divPrefix}今日名單 <span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">(${todayDateStr})</span>`;
 
       let counts = {
@@ -1166,6 +1015,7 @@
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.empNo}</td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 500;">
               ${emp.name}
+              ${(emp.dietType === '齋戒' && emp.ramadanStart && emp.ramadanEnd) ? `<div style="font-size: 0.85rem; color: var(--color-orange); margin-top: 2px; font-weight: normal;">(區間: ${formatROCDate(emp.ramadanStart)} ~ ${formatROCDate(emp.ramadanEnd)})</div>` : ''}
               <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">${emp.nationality}</div>
             </td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">
@@ -1284,13 +1134,20 @@
         ? 'cursor:pointer; background: var(--color-orange); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; text-decoration: none;'
         : 'cursor:pointer; text-decoration:underline;';
 
-      const ramadanStr = (currentSettings.ramadan_start && currentSettings.ramadan_end)
-        ? `<span style="font-size: 0.85rem; color: var(--color-orange); margin-left: 5px;">(齋戒設定: ${currentSettings.ramadan_start} ~ ${currentSettings.ramadan_end})</span>`
-        : '';
+      const ramadanStr = '';
 
       const isLunchActive = currentFilterStatus.startsWith('lunch');
       const isDinnerActive = currentFilterStatus.startsWith('dinner');
       const isRamadanActive = currentFilterStatus === 'ramadan';
+
+      const ramadanNamesHtml = ramadanEmps.map(emp => {
+        let rStr = '';
+        if (emp.ramadanStart && emp.ramadanEnd) {
+           rStr = ` (${formatROCDate(emp.ramadanStart)}~${formatROCDate(emp.ramadanEnd)})`;
+        }
+        return `<span>${emp.name}${rStr}</span>`;
+      }).join('、');
+      const ramadanDisplay = ramadanNamesHtml || '<span style="color: var(--text-muted);">今日無人齋戒</span>';
 
       const lunchBoxStyle = `flex:1; background: ${isLunchActive ? 'rgba(10,132,255,0.1)' : 'rgba(255,255,255,0.5)'}; padding: 15px; border-radius: 8px; border: 2px solid ${isLunchActive ? 'var(--color-blue)' : 'transparent'}; transition: all 0.3s ease; transform: ${isLunchActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isLunchActive ? '0 4px 12px rgba(10,132,255,0.2)' : 'none'};`;
       const dinnerBoxStyle = `flex:1; background: ${isDinnerActive ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.5)'}; padding: 15px; border-radius: 8px; border: 2px solid ${isDinnerActive ? 'var(--color-orange)' : 'transparent'}; transition: all 0.3s ease; transform: ${isDinnerActive ? 'scale(1.02)' : 'scale(1)'}; box-shadow: ${isDinnerActive ? '0 4px 12px rgba(255,159,10,0.2)' : 'none'};`;
@@ -1322,12 +1179,10 @@
           <div style="${ramadanBoxStyle}" onclick="setFilter('ramadan')">
             <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--color-purple, #af52de); display: flex; align-items: center; gap: 8px;">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-              齋戒中: ${ramadanCount} 人
+              今日齋戒中: ${ramadanCount} 人
             </div>
-            <div style="color: var(--text-secondary); line-height: 1.6; font-size: 0.9rem;">
-              ${(currentSettings.ramadan_start && currentSettings.ramadan_end)
-          ? `<span style="color: var(--color-orange);">📅 ${currentSettings.ramadan_start} ~ ${currentSettings.ramadan_end}</span>`
-          : '<span style="color: var(--text-muted);">尚未設定齋戒期間</span>'}
+            <div style="color: var(--text-secondary); line-height: 1.6; font-size: 1rem; word-wrap: break-word;">
+              ${ramadanDisplay}
             </div>
           </div>
         `;
@@ -1432,13 +1287,7 @@
         headerRow1 += `
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應扣伙食費</th>
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">${data.labels.special}</th>
-            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">應發津貼</th>
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">一般出勤</th>
-            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">平日(4h+)</th>
-            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(0h)</th>
-            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(8h)</th>
-            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(10h)</th>
-            <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">假日(12h+)</th>
             <th class="sticky-top" rowspan="2" style="padding: 12px 15px; font-weight: 600; border-bottom: 2px solid var(--glass-border);">備註</th>
           </tr>`;
         headerRow2 += `</tr>`;
@@ -1446,7 +1295,7 @@
 
         const tbody = document.getElementById('finance-preview-tbody');
         if (data.rows.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="${11 + data.dates.length * 2}" style="text-align:center; padding: 40px; color: var(--text-muted);">此區間無資料或全無訂餐</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="${7 + data.dates.length * 2}" style="text-align:center; padding: 40px; color: var(--text-muted);">此區間無資料或全無訂餐</td></tr>`;
           return;
         }
 
@@ -1479,17 +1328,14 @@
 
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.deduction}</td>`;
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.special || 0}</td>`;
-          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.allowance}</td>`;
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.norm}</td>`;
-          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.w4}</td>`;
-          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h0}</td>`;
-          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h8}</td>`;
-          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h10}</td>`;
-          html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border); text-align: right;">${r.h12}</td>`;
           html += `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border);">${r.note}</td>`;
           html += `</tr>`;
         });
         tbody.innerHTML = html;
+
+        // Auto-run cross check when previewing
+        runCrossCheck();
 
       } catch (err) {
         alert('預覽失敗: ' + err.message);
@@ -1699,7 +1545,7 @@
           }
 
           tr.innerHTML = `
-                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); font-weight: 500;">${emp.date || ''}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); font-weight: 500;">${formatROCDate(emp.date)}</td>
                     <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${emp.empNo}</td>
                     <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 500;">${emp.name}</td>
                     <td style="padding: 15px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary);">${emp.deptName}</td>
@@ -1712,6 +1558,49 @@
         });
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--color-red);">查詢失敗: ${err.message}</td></tr>`;
+      }
+    }
+    // Cross check functions
+    async function runCrossCheck() {
+      const startDate = document.getElementById('finance-start').value;
+      const endDate = document.getElementById('finance-end').value;
+      if (!startDate || !endDate) return alert('請選擇日期區間');
+      
+      const tbody = document.getElementById('crossCheckTbody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">比對中...請稍候</td></tr>';
+      document.getElementById('crossCheckResult').style.display = 'block';
+
+      try {
+        const res = await fetch('/api/meals/cross_check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ startDate, endDate })
+        });
+        const result = await res.json();
+        
+        if (!result.success) throw new Error(result.error || result.message);
+        
+        if (!result.anomalies || result.anomalies.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: green; font-weight: bold;">🎉 此區間無異常紀錄</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = result.anomalies.map(a => {
+          const isError = a.type === 'error';
+          const typeColor = isError ? 'red' : 'orange';
+          return `
+            <tr>
+              <td style="padding: 10px; border: 1px solid #dee2e6;">${a.date}</td>
+              <td style="padding: 10px; border: 1px solid #dee2e6;">${a.empId}</td>
+              <td style="padding: 10px; border: 1px solid #dee2e6;">${a.name}</td>
+              <td style="padding: 10px; border: 1px solid #dee2e6;">${a.hrOtHours}</td>
+              <td style="padding: 10px; border: 1px solid #dee2e6; color: ${a.hasDinner ? 'red' : 'inherit'};">${a.hasDinner ? '有' : '無'}</td>
+              <td style="padding: 10px; border: 1px solid #dee2e6; color: ${typeColor}; font-weight: bold;">${a.message}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">錯誤: ${err.message}</td></tr>`;
       }
     }
   </script>

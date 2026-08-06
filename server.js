@@ -224,12 +224,16 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
     const optOutLunchMap = {};
     const optOutDinnerMap = {};
     const divisionMap = {};
+    const ramadanStartMap = {};
+    const ramadanEndMap = {};
     if (dbEmps) {
         dbEmps.forEach(e => {
             dietMap[e.emp_id] = e.diet_type;
             optOutLunchMap[e.emp_id] = e.opt_out_lunch === 1;
             optOutDinnerMap[e.emp_id] = e.opt_out_dinner === 1;
             divisionMap[e.emp_id] = e.division;
+            ramadanStartMap[e.emp_id] = e.ramadan_start;
+            ramadanEndMap[e.emp_id] = e.ramadan_end;
         });
     }
 
@@ -285,17 +289,20 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         // Note: '齋戒' in DB is a past snapshot; it must NOT override Ramadan calculation
         let defaultDiet = '葷食';
         let isRamadan = false;
+        
         if (isIndonesian) {
             defaultDiet = '不吃豬';
-            
-            // Check Ramadan
-            if (settings && settings.ramadan_start && settings.ramadan_end) {
-                const rStart = new Date(settings.ramadan_start);
-                const rEnd = new Date(settings.ramadan_end);
-                const current = new Date(targetDateStr.replace(/\//g, '-'));
-                if (current >= rStart && current <= rEnd) {
-                    isRamadan = true;
-                }
+        }
+
+        // Check Ramadan (Employee specific - applies to anyone who has it set)
+        const rStartStr = ramadanStartMap[emp.EMP_ID];
+        const rEndStr = ramadanEndMap[emp.EMP_ID];
+        if (rStartStr && rEndStr) {
+            const rStart = new Date(rStartStr);
+            const rEnd = new Date(rEndStr);
+            const current = new Date(targetDateStr.replace(/\//g, '-'));
+            if (current >= rStart && current <= rEnd) {
+                isRamadan = true;
             }
         }
 
@@ -303,7 +310,13 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         let finalDiet = defaultDiet;
         // DB diet applies only if it's not '齋戒' (which is time-based, not a permanent setting)
         if (dbDiet && dbDiet !== '齋戒') finalDiet = dbDiet;
-        // Ramadan always takes final priority for Indonesian employees
+
+        // Ensure Indonesians revert to '不吃豬' after Ramadan (unless they are specifically '素食')
+        if (isIndonesian && !isRamadan && finalDiet !== '素食') {
+            finalDiet = '不吃豬';
+        }
+
+        // Ramadan always takes final priority
         if (isRamadan) finalDiet = '齋戒';
 
         let optOutLunch = optOutLunchMap[emp.EMP_ID] || false;
@@ -319,22 +332,20 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         let otHoursVal = ot ? parseFloat(ot.OT_HOURS || ot.HOURS || ot.TOT_HOURS || 0) : 0;
         const isRestOvertime = (match && match.IS_REST_OVERTIME === 1);
         
+        // --- 預報機制 ---
+        // 不再強制依賴 HR 加班資料 (otHoursVal >= 2) 來預設晚餐
+        // 晚餐預設為不吃，由各單位主管於每日下午前在系統上手動勾選 (預報)
         let hasDinner = false;
         
+        // 假日加班不供餐
         if (isRestOvertime) {
-            // 假日加班：公司不供餐（自動關閉）
             hasLunch = false;
-            hasDinner = false;
-        } else {
-            // 平日：加班滿 2 小時才自動訂晚餐
-            if (otHoursVal >= 2) {
-                hasDinner = true;
-            }
         }
 
         if (optOutLunch) hasLunch = false;
         if (optOutDinner) hasDinner = false;
 
+        // 如果資料庫中已經有今天儲存的預報紀錄，則以預報紀錄為準
         if (localRec) {
             hasLunch = localRec.has_lunch === 1;
             hasDinner = localRec.has_dinner === 1;
@@ -378,7 +389,9 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
             hasOt: !!ot,
             otHours: otHoursVal,
             isRestOvertime: isRestOvertime,
-            division: finalDivision
+            division: finalDivision,
+            ramadanStart: ramadanStartMap[emp.EMP_ID] || '',
+            ramadanEnd: ramadanEndMap[emp.EMP_ID] || ''
         };
     });
 
@@ -449,7 +462,7 @@ app.get('/api/meals/today', async (req, res) => {
     });
 
     const dbEmps = await new Promise((resolve) => {
-        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, division FROM employees`, (err, rows) => {
+        db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, division, ramadan_start, ramadan_end FROM employees`, (err, rows) => {
             resolve(rows || []);
         });
     });
@@ -572,9 +585,9 @@ app.get('/api/employees', (req, res) => {
 // Update allowance status (no accommodation / returning home)
 app.put('/api/employees/:emp_id/allowance-status', (req, res) => {
     const { emp_id } = req.params;
-    const { no_accommodation, is_returning_home, return_home_start, return_home_end } = req.body;
-    db.run(`UPDATE employees SET no_accommodation = ?, is_returning_home = ?, return_home_start = ?, return_home_end = ? WHERE emp_id = ?`, 
-        [no_accommodation ? 1 : 0, is_returning_home ? 1 : 0, return_home_start || null, return_home_end || null, emp_id], 
+    const { no_accommodation, is_returning_home, return_home_start, return_home_end, ramadan_start, ramadan_end } = req.body;
+    db.run(`UPDATE employees SET no_accommodation = ?, is_returning_home = ?, return_home_start = ?, return_home_end = ?, ramadan_start = ?, ramadan_end = ? WHERE emp_id = ?`, 
+        [no_accommodation ? 1 : 0, is_returning_home ? 1 : 0, return_home_start || null, return_home_end || null, ramadan_start || null, ramadan_end || null, emp_id], 
         function(err) {
             if (err) return res.status(500).json({ success: false, error: err.message });
             cachedData = null;
@@ -605,6 +618,122 @@ app.post('/api/meals/update', (req, res) => {
                 broadcastEvent('meal_toggled', { empId, hasLunch, hasDinner });
                 res.json({ success: true });
             });
+});
+
+async function getCrossCheckAnomalies(startStr, endStr) {
+    const dates = getDatesInRange(startStr, endStr);
+    if (dates.length === 0) return [];
+
+    const mainToken = await getAuthToken(config.USER_ACCOUNT, config.USER_PWD);
+    let otToken = mainToken;
+    if (config.OT_USER_ACCOUNT && config.OT_USER_PWD) {
+        try { otToken = await getAuthToken(config.OT_USER_ACCOUNT, config.OT_USER_PWD); } catch(e) {}
+    }
+
+    const anomalies = [];
+    const db = require('./db');
+    
+    // Process one date at a time
+    for (const d of dates) {
+        const targetDate = d.date; // "2026/08/06"
+
+        // 1. Fetch Overtime
+        const otRes = await fetch(`${config.HR_API_BASE}/api/am/emp_ot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otToken}` },
+            body: JSON.stringify({ CO_ID: config.CO_ID, OT_DATE: targetDate, LIMIT: 5000 })
+        });
+        
+        let otRecords = [];
+        if (otRes.ok) {
+            const otResult = await otRes.json();
+            otRecords = otResult.data || [];
+        }
+        
+        const otMap = new Map();
+        otRecords.forEach(ot => {
+            const hours = parseFloat(ot.OT_HOURS || ot.HOURS || ot.TOT_HOURS || 0);
+            otMap.set(ot.EMP_ID, hours);
+        });
+
+        // 2. Fetch Local Meal Records
+        const localRecords = await new Promise((resolve) => {
+            db.all(`
+                SELECT m.emp_id, m.has_dinner, e.name, e.department, e.is_foreign 
+                FROM meal_records m
+                JOIN employees e ON m.emp_id = e.emp_id
+                WHERE m.date = ?`, [targetDate], (err, rows) => {
+                resolve(rows || []);
+            });
+        });
+
+        // 3. Cross Check Logic
+        for (const rec of localRecords) {
+            const hasDinner = rec.has_dinner === 1;
+            const hrOtHours = otMap.get(rec.emp_id) || 0;
+            
+            if (hasDinner && hrOtHours < 2) {
+                anomalies.push({
+                    date: targetDate,
+                    empId: rec.emp_id,
+                    name: rec.name,
+                    department: rec.department,
+                    hasDinner: true,
+                    hrOtHours: hrOtHours,
+                    type: 'error',
+                    message: '有訂晚餐，但 HR 無足夠加班紀錄 (防弊)'
+                });
+            }
+            if (!hasDinner && hrOtHours >= 2) {
+                anomalies.push({
+                    date: targetDate,
+                    empId: rec.emp_id,
+                    name: rec.name,
+                    department: rec.department,
+                    hasDinner: false,
+                    hrOtHours: hrOtHours,
+                    type: 'warning',
+                    message: '有加班紀錄，但未訂晚餐 (提醒)'
+                });
+            }
+        }
+    }
+    return anomalies;
+}
+
+// --- 新增：事後勾稽 (Cross Check) API ---
+app.post('/api/meals/cross_check', async (req, res) => {
+    let { startDate, endDate } = req.body;
+    
+    // Fallback to yesterday if no dates provided (for backward compatibility if needed)
+    if (!startDate || !endDate) {
+        if (req.body.targetDate) {
+            startDate = req.body.targetDate;
+            endDate = req.body.targetDate;
+        } else {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yStr = `${yesterday.getFullYear()}/${String(yesterday.getMonth() + 1).padStart(2, '0')}/${String(yesterday.getDate()).padStart(2, '0')}`;
+            startDate = yStr;
+            endDate = yStr;
+        }
+    }
+    
+    startDate = startDate.replace(/-/g, '/');
+    endDate = endDate.replace(/-/g, '/');
+
+    if (!isConfigured()) {
+        return res.json({ error: true, message: "API not configured." });
+    }
+
+    try {
+        const anomalies = await getCrossCheckAnomalies(startDate, endDate);
+        res.json({ success: true, anomalies });
+
+    } catch (error) {
+        console.error("Cross check error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // Save all meals as a snapshot for today
@@ -984,13 +1113,7 @@ app.get('/api/export/excel', async (req, res) => {
         const baseColumns2 = [
             { key: 'deduction', width: 15 },
             { key: 'special', width: 15 },
-            { key: 'allowance', width: 15 },
             { key: 'norm', width: 15 },
-            { key: 'w4', width: 15 },
-            { key: 'h0', width: 15 },
-            { key: 'h8', width: 15 },
-            { key: 'h10', width: 15 },
-            { key: 'h12', width: 15 },
             { key: 'note', width: 25 }
         ];
 
@@ -1006,7 +1129,7 @@ app.get('/api/export/excel', async (req, res) => {
             row2.push('晚');
         });
 
-        const headers2 = ['應扣伙食費', data.labels.special, '應發津貼', '一般出勤(天)', '平日加班4hr+(天)', '假日未加班(天)', '假日加班8hr(天)', '假日加班10hr+(天)', '假日加班12hr+(天)', '備註'];
+        const headers2 = ['應扣伙食費', data.labels.special, '一般出勤(天)', '備註'];
         headers2.forEach(h => {
             row1.push(h);
             row2.push(h);
@@ -1044,13 +1167,7 @@ app.get('/api/export/excel', async (req, res) => {
                 dept: r.dept,
                 deduction: r.deduction,
                 special: r.special,
-                allowance: r.allowance,
                 norm: r.norm,
-                w4: r.w4,
-                h0: r.h0,
-                h8: r.h8,
-                h10: r.h10,
-                h12: r.h12,
                 note: r.note
             };
 
@@ -1095,6 +1212,42 @@ app.get('/api/export/excel', async (req, res) => {
                 excelRow.getCell(cellColIndex + i).alignment = { vertical: 'middle', horizontal: 'center' };
             }
         });
+        // Add Cross Check Anomalies Sheet
+        try {
+            const anomalies = await getCrossCheckAnomalies(start.replace(/-/g, '/'), end.replace(/-/g, '/'));
+            if (anomalies && anomalies.length > 0) {
+                const sheet2 = workbook.addWorksheet('防弊異常清單');
+                sheet2.columns = [
+                    { header: '日期', key: 'date', width: 12 },
+                    { header: '工號', key: 'empId', width: 12 },
+                    { header: '姓名', key: 'name', width: 15 },
+                    { header: '部門', key: 'department', width: 15 },
+                    { header: 'HR加班(小時)', key: 'hrOtHours', width: 15 },
+                    { header: '系統訂晚餐', key: 'hasDinner', width: 12 },
+                    { header: '異常原因', key: 'message', width: 40 }
+                ];
+                
+                sheet2.getRow(1).font = { bold: true };
+                sheet2.getRow(1).alignment = { horizontal: 'center' };
+                
+                anomalies.forEach(a => {
+                    const row = sheet2.addRow({
+                        date: a.date,
+                        empId: a.empId,
+                        name: a.name,
+                        department: a.department || '',
+                        hrOtHours: a.hrOtHours,
+                        hasDinner: a.hasDinner ? '有' : '無',
+                        message: a.message
+                    });
+                    
+                    const typeColor = a.type === 'error' ? 'FFFF0000' : 'FFFFA500'; // Red for error, Orange for warning
+                    row.getCell('message').font = { color: { argb: typeColor }, bold: true };
+                });
+            }
+        } catch (err) {
+            console.error('Error generating cross check for excel:', err);
+        }
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=meal_report_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
