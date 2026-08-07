@@ -150,6 +150,48 @@ async function getMealsFromLocal(dateStr, dbEmps, settings) {
     });
 }
 
+// Temporary debug endpoint
+app.get('/api/debug/hr', async (req, res) => {
+    try {
+        const { date, emp_no } = req.query;
+        if (!date || !emp_no) return res.json({error: "missing args"});
+        const mainToken = await getAuthToken(config.USER_ACCOUNT, config.USER_PWD);
+        
+        // get emp
+        const empRes = await fetch(`${config.HR_API_BASE}/api/ed/emp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
+            body: JSON.stringify({ CO_ID: config.CO_ID, LIMIT: 1000 })
+        });
+        const empResult = await empRes.json();
+        const emp = (empResult.data || []).find(e => e.EMP_NO === emp_no);
+        if (!emp) return res.json({error: "emp not found"});
+
+        // get cardmatch
+        const cardMatchRes = await fetch(`${config.HR_API_BASE}/api/am/emp_cardmatch`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
+            body: JSON.stringify({ CO_ID: config.CO_ID, WORK_SDATE: date, WORK_EDATE: date, LIMIT: 1000 })
+        });
+        const cmResult = await cardMatchRes.json();
+        const cm = (cmResult.data || []).find(c => c.EMP_ID === emp.EMP_ID);
+
+        // get ot
+        let otToken = mainToken;
+        if (config.OT_USER_ACCOUNT && config.OT_USER_PWD) {
+            otToken = await getAuthToken(config.OT_USER_ACCOUNT, config.OT_USER_PWD);
+        }
+        const otRes = await fetch(`${config.HR_API_BASE}/api/am/emp_ot`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otToken}` },
+            body: JSON.stringify({ CO_ID: config.CO_ID, OT_DATE: date, LIMIT: 1000 })
+        });
+        const otResult = await otRes.json();
+        const ot = (otResult.data || []).find(o => o.EMP_ID === emp.EMP_ID);
+
+        res.json({ emp, cardmatch: cm, ot: ot });
+    } catch(e) {
+        res.json({error: e.message});
+    }
+});
+
 async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbEmps, settings) {
     const config = require('./config.json');
     // 3. Fetch Clock-in comparison results
@@ -172,20 +214,50 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         }
     });
 
-    // 5. Fetch Overtime (emp_ot) using OT token
+    // Expand query by 1 day on each side: OT_SDATE = prevDay, OT_EDATE = nextDay
+    // This ensures we capture overnight OT and same-day OT (API filters by OT_END time).
+    const tDate = new Date(targetDateStr.replace(/\//g, '-'));
+    const prevDate = new Date(tDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+    const nextDate = new Date(tDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const pad = (n) => String(n).padStart(2, '0');
+    const prevDateStr = `${prevDate.getFullYear()}/${pad(prevDate.getMonth()+1)}/${pad(prevDate.getDate())}`;
+    const nextDateStr = `${nextDate.getFullYear()}/${pad(nextDate.getMonth()+1)}/${pad(nextDate.getDate())}`;
+
     const otRes = await fetch(`${config.HR_API_BASE}/api/am/emp_ot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otToken}` },
-      body: JSON.stringify({ CO_ID: config.CO_ID, OT_DATE: targetDateStr, LIMIT: 1000 })
+      body: JSON.stringify({ CO_ID: config.CO_ID, OT_SDATE: prevDateStr, OT_EDATE: nextDateStr, LIMIT: 1000 })
     });
     let otRecords = [];
     if (otRes.ok) {
         const otResult = await otRes.json();
         otRecords = otResult.data || [];
     }
+
+    // Normalize a date string (e.g. "2026-07-31", "2026/07/31") to "20260731"
+    const normDate = (dStr) => {
+        if (!dStr) return '';
+        const parts = String(dStr).split(/[ T]/)[0].split(/[-/]/);
+        if (parts.length === 3) {
+            return `${parts[0]}${String(parseInt(parts[1])).padStart(2,'0')}${String(parseInt(parts[2])).padStart(2,'0')}`;
+        }
+        return '';
+    };
+    const targetClean = normDate(targetDateStr);
+
+    // Group OT by EMP_ID, only including records where OT_DATE matches the target date
     const otMap = new Map();
     otRecords.forEach(ot => {
-        otMap.set(ot.EMP_ID, ot);
+        const otDateClean = normDate(ot.OT_DATE);
+        // Only count OT whose attribution date (OT_DATE) matches today
+        if (!otDateClean || otDateClean !== targetClean) return;
+
+        const existing = otMap.get(ot.EMP_ID) || { OT_VALUE: 0 };
+        const recordHours = parseFloat(ot.OT_VALUE || 0) || 0;
+        existing.OT_VALUE += recordHours;
+        otMap.set(ot.EMP_ID, existing);
     });
 
     // 6. Fetch Leaves (emp_leave)
@@ -256,7 +328,7 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         if (isBoard) return false;
         if (emp.EMP_NO && emp.EMP_NO.startsWith('J')) return false; // 忽略 J 開頭工號
         if (emp.LEAVE_DATE || emp.QUIT_DATE) return false; // 忽略離職人員
-        if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID)) return false; // 不在刷卡應出勤名單且未請假者，略過（免刷卡人員）
+        if (!cardMatchMap.has(emp.EMP_ID) && !leaveMap.has(emp.EMP_ID) && !otMap.has(emp.EMP_ID)) return false; // 不在刷卡應出勤名單、未請假、且無加班者，略過
         return true;
     })
     .map(emp => {
@@ -329,7 +401,7 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
 
         let hasLunch = status === 'present';
         
-        let otHoursVal = ot ? parseFloat(ot.OT_HOURS || ot.HOURS || ot.TOT_HOURS || 0) : 0;
+        let otHoursVal = ot ? ot.OT_VALUE : 0;
         const isRestOvertime = (match && match.IS_REST_OVERTIME === 1);
         
         // --- 預報機制 ---
@@ -781,6 +853,106 @@ app.post('/api/meals/save_all', (req, res) => {
     });
 });
 
+// Sync historical HR data (Option A logic: updates OT/status but preserves manual lunch/dinner)
+app.post('/api/finance/sync', async (req, res) => {
+    const startDateStr = req.query.startDate;
+    const endDateStr = req.query.endDate;
+    if (!startDateStr || !endDateStr) return res.status(400).json({ error: "Missing dates" });
+
+    if (!isConfigured()) return res.status(400).json({ error: "API not configured." });
+
+    try {
+        const s = new Date(startDateStr);
+        const e = new Date(endDateStr);
+        const diffDays = Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24));
+        if (diffDays > 45) return res.status(400).json({ error: "查詢區間不可超過 45 天。" });
+
+        let targetDates = [];
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            targetDates.push(`${y}/${m}/${day}`);
+        }
+
+        const mainToken = await getAuthToken(config.USER_ACCOUNT, config.USER_PWD);
+        let otToken = mainToken;
+        if (config.OT_USER_ACCOUNT && config.OT_USER_PWD) {
+            try { otToken = await getAuthToken(config.OT_USER_ACCOUNT, config.OT_USER_PWD); } catch (err) {}
+        }
+
+        const empRes = await fetch(`${config.HR_API_BASE}/api/ed/emp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mainToken}` },
+            body: JSON.stringify({ CO_ID: config.CO_ID, LIMIT: 1000 })
+        });
+        const empResult = await empRes.json();
+        const employees = empResult.data || [];
+
+        const dbEmps = await new Promise(resolve => {
+            db.all(`SELECT emp_id, diet_type, opt_out_lunch, opt_out_dinner, division, ramadan_start, ramadan_end FROM employees`, (err, rows) => resolve(rows || []));
+        });
+        const settingsMap = await new Promise(resolve => {
+            db.all(`SELECT key, value FROM settings`, (err, rows) => {
+                const map = {};
+                if (rows) rows.forEach(r => map[r.key] = r.value);
+                resolve(map);
+            });
+        });
+
+        // 1. Fetch all data sequentially from HR API
+        let allMealsToInsert = [];
+        for (const d of targetDates) {
+            const meals = await getMealsForDate(d, mainToken, otToken, employees, dbEmps, settingsMap);
+            const globalFallbackIsHoliday = getDatesInRange(d, d)[0]?.isHoliday ? 1 : 0;
+
+            // === DEBUG ===
+            const otSample = meals.filter(m => m.otHours > 0);
+            if (otSample.length > 0) {
+                console.log(`[SYNC] ${d}: ${otSample.length} employees with OT ->`, otSample.map(m => `${m.empNo} ${m.otHours}hr`));
+            } else {
+                console.log(`[SYNC] ${d}: No OT found. Sample meal:`, meals[0] ? { empNo: meals[0].empNo, otHours: meals[0].otHours, hasOt: meals[0].hasOt } : 'no meals');
+            }
+            // === END DEBUG ===
+
+            meals.forEach(m => {
+                const isEmpHoliday = m.isRestOvertime ? 1 : globalFallbackIsHoliday;
+                allMealsToInsert.push([d, m.empId, m.hasLunch ? 1 : 0, m.hasDinner ? 1 : 0, isEmpHoliday, m.otHours || 0, m.status || 'present']);
+            });
+        }
+
+        // 2. Save to DB using Option A logic (preserve existing has_lunch/has_dinner)
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            const stmt = db.prepare(`
+                INSERT INTO meal_records (date, emp_id, has_lunch, has_dinner, is_holiday, ot_hours, status, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(date, emp_id) DO UPDATE SET 
+                is_holiday=excluded.is_holiday, ot_hours=excluded.ot_hours, status=excluded.status, updated_at=CURRENT_TIMESTAMP
+            `);
+
+            for (const row of allMealsToInsert) {
+                stmt.run(row);
+            }
+
+            stmt.finalize((err) => {
+                if (err) {
+                    db.run('ROLLBACK');
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                db.run('COMMIT', (commitErr) => {
+                    if (commitErr) return res.status(500).json({ success: false, error: commitErr.message });
+                    cachedData = null; // invalidate cache
+                    res.json({ success: true });
+                });
+            });
+        });
+
+    } catch (error) {
+        console.error("Sync error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Get settings
 app.get('/api/settings', (req, res) => {
     db.all(`SELECT * FROM settings`, (err, rows) => {
@@ -851,11 +1023,12 @@ async function getFinanceData(startStr, endStr) {
     const bentoPrice = parseInt(s['bento_price'] || 60);
     const mealSubsidy = parseInt(s['meal_subsidy_per_meal'] || 70);  // company subsidy per meal eaten
     const fixedAllowance = parseInt(s['fixed_monthly_allowance'] || 300); // fixed 300 per month
-    const foreignSpecialDayAllowance = parseInt(s['foreign_holiday_no_ot_allowance'] || 100); // 返鄉/請假/假日休息 100/day
-    const ot4Allowance = parseInt(s['universal_weekday_ot_4hr_allowance'] || 75);
-    const ot8Allowance = parseInt(s['universal_holiday_ot_8hr_allowance'] || 75);
-    const ot10Allowance = parseInt(s['universal_holiday_ot_10hr_allowance'] || 150);
-    const ot12Allowance = parseInt(s['universal_holiday_ot_12hr_allowance'] || 225);
+    const foreignSpecialDayAllowance = parseInt(s['foreign_hol_no_ot_allowance'] || 100); 
+    const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+    const ot4Allowance = parseInt(s['common_ot4_allowance'] || 75);
+    const ot8Allowance = parseInt(s['common_hol8_allowance'] || 75);
+    const ot10Allowance = parseInt(s['common_hol10_allowance'] || 150);
+    const ot12Allowance = parseInt(s['common_hol12_allowance'] || 225);
 
     const dates = getDatesInRange(startStr, endStr);
     if (dates.length === 0) return { dates: [], rows: [] };
@@ -995,10 +1168,15 @@ async function getFinanceData(startStr, endStr) {
         let note = '';
         
         // OT subsidies (universal for all)
-        const otSubsidies = (e.stats.weekday_ot_4hr * ot4Allowance) +
-                            (e.stats.hol_8hr * ot8Allowance) +
-                            (e.stats.hol_10hr * ot10Allowance) +
-                            (e.stats.hol_12hr * ot12Allowance);
+        let otSubsidies = (e.stats.weekday_ot_4hr * ot4Allowance) +
+                          (e.stats.hol_8hr * ot8Allowance) +
+                          (e.stats.hol_10hr * ot10Allowance) +
+                          (e.stats.hol_12hr * ot12Allowance);
+                          
+        // Add foreign extra for hol_8hr
+        if (e.is_foreign) {
+            otSubsidies += (e.stats.hol_8hr * foreignHol8Extra);
+        }
 
         // Interpretation A:
         //   allowance = 固定300 + (平日有吃便當的餐數 × 70) + 加班補貼 + (外勞特殊天數 × 100)
@@ -1068,6 +1246,161 @@ async function getFinanceData(startStr, endStr) {
         rows,
         labels: {
             special: s['fr_special_label'] || '特殊日補貼(返鄉/請假/假日休息)'
+        }
+    };
+}
+
+// ============================================================
+// OT Summary: 假日加班統計 (新格式)
+// ============================================================
+async function getOtSummaryData(startStr, endStr) {
+    const db = require('./db');
+
+    const dbEmps = await new Promise((resolve) => {
+        db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
+    });
+    const dbEmpsMap = {};
+    dbEmps.forEach(e => dbEmpsMap[e.emp_id] = e);
+
+    const settingRows = await new Promise((resolve) => {
+        db.all(`SELECT * FROM settings`, (err, rows) => resolve(rows || []));
+    });
+    const s = {};
+    settingRows.forEach(r => s[r.key] = r.value);
+
+    // Common Allowances
+    const fixedAllowance = parseInt(s['fixed_monthly_allowance'] || 300);
+    const commonOt4 = parseInt(s['common_ot4_allowance'] || 75);
+    const commonHol8 = parseInt(s['common_hol8_allowance'] || 75);
+    const commonHol10 = parseInt(s['common_hol10_allowance'] || 150);
+    const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
+
+    // Foreign-specific Allowances
+    const foreignHolNoOt = parseInt(s['foreign_hol_no_ot_allowance'] || 100);
+    const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+
+    const dates = getDatesInRange(startStr, endStr);
+    if (dates.length === 0) return { rows: [], settings: {} };
+
+    const placeholders = dates.map(() => '?').join(',');
+    const dateStrings = dates.map(d => d.date);
+
+    const records = await new Promise((resolve) => {
+        db.all(`SELECT * FROM meal_records WHERE date IN (${placeholders})`, dateStrings, (err, rows) => {
+            resolve(rows || []);
+        });
+    });
+
+    const empMap = {};
+
+    records.forEach(m => {
+        const dbEmp = dbEmpsMap[m.emp_id];
+        if (!dbEmp) return;
+        if (dbEmp.emp_no && dbEmp.emp_no.startsWith('J')) return;
+        if (dbEmp.department && dbEmp.department.includes('董事')) return;
+
+        if (!empMap[m.emp_id]) {
+            empMap[m.emp_id] = {
+                emp_no: dbEmp.emp_no,
+                name: dbEmp.name,
+                department: dbEmp.department,
+                is_foreign: dbEmp.is_foreign === 1,
+                is_returning_home: dbEmp.is_returning_home === 1,
+                is_returning_home: dbEmp.is_returning_home === 1,
+                no_accommodation: dbEmp.no_accommodation === 1,
+                w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
+            };
+        }
+
+        const e = empMap[m.emp_id];
+        
+        // 判斷是否為假日 (如果資料庫沒標記，但日期是週末也算)
+        const mDate = new Date(m.date);
+        const day = mDate.getDay();
+        const isWeekend = (day === 0 || day === 6);
+        const isHoliday = (m.is_holiday === 1) || isWeekend;
+        
+        // 外勞平日請假 (Rule 6)
+        const isForeignWeekdayLeave = !isHoliday && e.is_foreign && (m.status === 'leave');
+
+        // 確保 otHours 是數字
+        const otHours = parseFloat(m.ot_hours) || 0;
+
+        if (isHoliday) {
+            if (otHours >= 12) e.h12++;
+            else if (otHours >= 10) e.h10++;
+            else if (otHours >= 8) e.h8++;
+            else e.h0++;
+        } else {
+            if (isForeignWeekdayLeave) {
+                // 平日請假且為外勞，視同假日未加班(發 100 元)
+                e.h0++;
+            } else if (otHours >= 4) {
+                // 平日加班滿 4 小時
+                e.w4++;
+            }
+        }
+
+    });
+
+    const rows = [];
+    Object.values(empMap).forEach(e => {
+        // 不給假日伙食津貼：返鄉中 or 無住宿
+        const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+
+        // 判定外勞資格：非返鄉且非無住宿的外勞
+        const isEligibleForeigner = (!noHolidayAllowance && e.is_foreign);
+        
+        const w4Total = e.w4 * commonOt4;
+        
+        // 假日未出勤(h0)：只有符合資格的外勞有補貼
+        const h0Total = e.h0 * (isEligibleForeigner ? foreignHolNoOt : 0);
+        
+        // 假日加班8hr(h8)：共同津貼 + 外勞專屬額外補貼
+        const h8Total = e.h8 * (commonHol8 + (isEligibleForeigner ? foreignHol8Extra : 0));
+        
+        // 假日加班10hr/12hr：皆領取共同津貼
+        const h10Total = e.h10 * commonHol10;
+        const h12Total = e.h12 * commonHol12;
+
+        const fixed = noHolidayAllowance ? 0 : fixedAllowance;
+
+        const grandTotal = w4Total + h0Total + h8Total + h10Total + h12Total + fixed;
+
+        // Skip employees with no data at all
+        if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+
+        let note = '';
+        if (noHolidayAllowance) note = '不給假日伙食津貼';
+
+        rows.push({
+            emp_no: e.emp_no,
+            name: e.name,
+            department: e.department,
+            w4_days: e.w4, w4_total: w4Total,
+            h0_days: e.h0, h0_total: h0Total,
+            h8_days: e.h8, h8_total: h8Total,
+            h10_days: e.h10, h10_total: h10Total,
+            h12_days: e.h12, h12_total: h12Total,
+            fixed,
+            grand_total: grandTotal,
+            note
+        });
+    });
+
+    // Sort by emp_no
+    rows.sort((a, b) => (a.emp_no || '').localeCompare(b.emp_no || ''));
+
+    return {
+        rows,
+        settings: {
+            fixedAllowance,
+            commonOt4,
+            commonHol8,
+            commonHol10,
+            commonHol12,
+            foreignHolNoOt,
+            foreignHol8Extra
         }
     };
 }
@@ -1258,7 +1591,219 @@ app.get('/api/export/excel', async (req, res) => {
     }
 });
 
-// Print Endpoint
+// OT Summary Excel Export (假日加班統計 - 新格式)
+app.get('/api/export/excel/ot-summary', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+
+        const startStr = start.replace(/-/g, '/');
+        const endStr = end.replace(/-/g, '/');
+        const data = await getOtSummaryData(startStr, endStr);
+        const cfg = data.settings;
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('加班統計');
+        sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+
+        // Header labels
+        const h0Label = `假日未加班\n補貼 ${cfg.foreignHolNoOt}/天`;
+        const h8Label  = `假日加班8hr\n(外勞+${cfg.foreignHol8Extra})`;
+
+        // Row 1: group headers
+        const row1 = sheet.addRow([
+            '工號', '姓名',
+            '假日未加班', '',
+            '假日加班8hr', '',
+            '假日加班10hr', '',
+            '假日加班12hr', '',
+            '平日加班4hr+', '',
+            `固定津貼\n${cfg.fixedAllowance}/人`,
+            '總計', '備註'
+        ]);
+        // Row 2: sub-headers (天數 / 合計)
+        const row2 = sheet.addRow([
+            '工號', '姓名',
+            '天數', `補貼合計\n(外勞${cfg.foreignHolNoOt}/天)`,
+            '天數', `合計\n(共同${cfg.commonHol8}外勞+${cfg.foreignHol8Extra})`,
+            '天數', `合計\n(${cfg.commonHol10})`,
+            '天數', `合計\n(${cfg.commonHol12})`,
+            '天數', `合計\n(${cfg.commonOt4}/次)`,
+            '', '總計', '備註'
+        ]);
+
+        // Merge row1 group cells
+        sheet.mergeCells('A1:A2'); // 工號
+        sheet.mergeCells('B1:B2'); // 姓名
+        sheet.mergeCells('C1:D1'); // 假日未加班
+        sheet.mergeCells('E1:F1'); // 假日加班8hr
+        sheet.mergeCells('G1:H1'); // 假日加班10hr
+        sheet.mergeCells('I1:J1'); // 假日加班12hr
+        sheet.mergeCells('K1:L1'); // 平日加班4hr+
+        sheet.mergeCells('M1:M2'); // 固定津貼
+        sheet.mergeCells('N1:N2'); // 總計
+        sheet.mergeCells('O1:O2'); // 備註
+
+        // Column widths
+        sheet.columns = [
+            { key: 'emp_no',     width: 12 },
+            { key: 'name',       width: 12 },
+            { key: 'h0_days',    width: 9  },
+            { key: 'h0_total',   width: 14 },
+            { key: 'h8_days',    width: 9  },
+            { key: 'h8_total',   width: 14 },
+            { key: 'h10_days',   width: 10 },
+            { key: 'h10_total',  width: 14 },
+            { key: 'h12_days',   width: 10 },
+            { key: 'h12_total',  width: 14 },
+            { key: 'w4_days',    width: 10 },
+            { key: 'w4_total',   width: 14 },
+            { key: 'fixed',      width: 12 },
+            { key: 'grand_total',width: 12 },
+            { key: 'note',       width: 20 }
+        ];
+
+        // Style header rows
+        const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        const subHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A9E' } };
+        const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+        const centerAlign = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+        [row1, row2].forEach((r, idx) => {
+            r.height = 32;
+            r.eachCell(cell => {
+                cell.fill = idx === 0 ? headerFill : subHeaderFill;
+                cell.font = headerFont;
+                cell.alignment = centerAlign;
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+        });
+
+        // Color coding for column groups
+        const groupColors = {
+            C: 'FFE8F4FD', D: 'FFE8F4FD',   // 未加班 - light blue
+            E: 'FFFFE0B2', F: 'FFFFE0B2',   // 8hr - light orange
+            G: 'FFFCE4EC', H: 'FFFCE4EC',   // 10hr - light red
+            I: 'FFEDE7F6', J: 'FFEDE7F6',   // 12hr - light purple
+            K: 'FFE8F8FF', L: 'FFE8F8FF',   // 4hr - light cyan
+        };
+
+        // Data rows
+        data.rows.forEach(r => {
+            const excelRow = sheet.addRow({
+                emp_no:      r.emp_no,
+                name:        r.name,
+                h0_days:     r.h0_days,
+                h0_total:    r.h0_total,
+                h8_days:     r.h8_days,
+                h8_total:    r.h8_total,
+                h10_days:    r.h10_days,
+                h10_total:   r.h10_total,
+                h12_days:    r.h12_days,
+                h12_total:   r.h12_total,
+                w4_days:     r.w4_days,
+                w4_total:    r.w4_total,
+                fixed:       r.fixed,
+                grand_total: r.grand_total,
+                note:        r.note
+            });
+
+            excelRow.height = 22;
+            const borderStyle = { style: 'thin', color: { argb: 'FFCCCCCC' } };
+            const thinBorder = { top: borderStyle, left: borderStyle, bottom: borderStyle, right: borderStyle };
+
+            excelRow.eachCell((cell, colNum) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = thinBorder;
+
+                // Apply group background colors
+                const colLetter = String.fromCharCode(64 + colNum);
+                if (groupColors[colLetter]) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: groupColors[colLetter] } };
+                }
+            });
+
+            // Grand total: bold, yellow background
+            const totalCell = excelRow.getCell('grand_total');
+            totalCell.font = { bold: true };
+            totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+
+            // Note: red text if has content
+            if (r.note) {
+                const noteCell = excelRow.getCell('note');
+                noteCell.font = { color: { argb: 'FFCC0000' }, bold: true };
+                noteCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3F3' } };
+            }
+
+            // Zero days: dim the number
+            ['h0_days', 'h8_days', 'h10_days', 'h12_days'].forEach(k => {
+                if (r[k] === 0) {
+                    const col = { h0_days: 'C', h8_days: 'E', h10_days: 'G', h12_days: 'I' }[k];
+                    excelRow.getCell(col).font = { color: { argb: 'FFAAAAAA' } };
+                }
+            });
+        });
+
+        // Grand total footer row
+        if (data.rows.length > 0) {
+            const startDataRow = 3;
+            const endDataRow = 2 + data.rows.length;
+            const footerRow = sheet.addRow([
+                '合計', '',
+                { formula: `SUM(C${startDataRow}:C${endDataRow})` },
+                { formula: `SUM(D${startDataRow}:D${endDataRow})` },
+                { formula: `SUM(E${startDataRow}:E${endDataRow})` },
+                { formula: `SUM(F${startDataRow}:F${endDataRow})` },
+                { formula: `SUM(G${startDataRow}:G${endDataRow})` },
+                { formula: `SUM(H${startDataRow}:H${endDataRow})` },
+                { formula: `SUM(I${startDataRow}:I${endDataRow})` },
+                { formula: `SUM(J${startDataRow}:J${endDataRow})` },
+                { formula: `SUM(K${startDataRow}:K${endDataRow})` },
+                { formula: `SUM(L${startDataRow}:L${endDataRow})` },
+                ''
+            ]);
+            footerRow.height = 22;
+            footerRow.font = { bold: true };
+            footerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            footerRow.eachCell(cell => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'medium' },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium' },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            sheet.mergeCells(`A${endDataRow + 1}:B${endDataRow + 1}`);
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=ot_summary_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// OT Summary settings preview API
+app.get('/api/ot-summary/preview', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+        const data = await getOtSummaryData(start.replace(/-/g, '/'), end.replace(/-/g, '/'));
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 app.post('/api/print', async (req, res) => {
     try {
         const { htmlContent } = req.body;

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>外勞用餐自動化系統</title>
+  <title>用餐系統</title>
   <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
     rel="stylesheet">
@@ -184,7 +184,7 @@
     <header class="app-header"
       style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
       <div class="header-left">
-        <h1><span style="font-weight: 300;">公司用餐</span> <strong>自動化系統</strong></h1>
+        <h1><span style="font-weight: 300;">公司</span> <strong>用餐系統</strong></h1>
         <span class="badge"
           style="background: var(--color-blue); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; margin-left: 15px;">V1.1</span>
       </div>
@@ -206,7 +206,7 @@
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('guard')">🧑‍✈️ 警衛 (訂餐)</button>
       <button class="tab-btn" onclick="switchTab('admin')">👩‍💼 總務 (設定)</button>
-      <button class="tab-btn" onclick="switchTab('finance')">💰 財務 (結算)</button>
+      <button class="tab-btn" onclick="switchTab('finance')">💰 統計 (結算)</button>
       <button class="tab-btn" onclick="switchTab('query')">🔍 查詢 (唯讀)</button>
     </div>
   </div>
@@ -425,8 +425,7 @@
         <div class="table-container" style="overflow-x: auto; width: 100%; max-width: 100%;">
           <table style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;">
             <thead>
-              <tr
-                style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px;">
+              <tr style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px;">
                 <th
                   style="padding: 8px 4px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: var(--glass-bg); z-index: 2; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space: nowrap; min-width: 90px;">
                   人員 (工號/姓名)</th>
@@ -452,7 +451,76 @@
     <div class="app-container">
       <section class="panel-left card"
         style="background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: var(--border-radius-xl); padding: 25px; box-shadow: var(--glass-shadow);">
-        <h2 style="margin-top: 0; margin-bottom: 25px;">📊 財務結算與匯出</h2>
+        <h2 style="margin-top: 0; margin-bottom: 20px;">📊 查詢與匯出</h2>
+
+        <!-- ── 津貼設定面板（可收合） ── -->
+        <div id="allowance-panel" style="margin-bottom: 22px; border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden;">
+          <button onclick="toggleAllowancePanel()"
+            style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:12px 18px; background:rgba(10,132,255,0.07); border:none; cursor:pointer; font-size:1rem; font-weight:600; color:var(--text-primary);">
+            <span>⚙️ 假日津貼金額設定</span>
+            <span id="allowance-panel-arrow" style="transition:transform 0.3s;">▼</span>
+          </button>
+          <div id="allowance-panel-body" style="padding:18px 20px; display:none; background:rgba(255,255,255,0.03);">
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <!-- 🤝 共同津貼 (本外勞皆適用) -->
+              <div style="border: 1px solid var(--glass-border); border-radius: 8px; overflow: hidden;">
+                <div style="padding: 8px 12px; font-weight: 600; color: var(--color-blue); font-size: 0.95rem;">🤝 共同津貼 (本外勞皆適用)</div>
+                <div style="padding: 10px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; background: rgba(255,255,255,0.02);">
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>平日加班 4hr+ (元/次)</span>
+                    <input type="number" id="al-ot4" min="0" step="1" value="75" style="padding:6px; border-radius:6px; border:1px solid #90caf9; background:#e3f2fd; color:#0d47a1; font-weight:bold; text-align:center;">
+                  </label>
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>假日加班 8hr (元/天)</span>
+                    <input type="number" id="al-hol8" min="0" step="1" value="75" style="padding:6px; border-radius:6px; border:1px solid #90caf9; background:#e3f2fd; color:#0d47a1; font-weight:bold; text-align:center;">
+                  </label>
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>假日加班 10hr (元/天)</span>
+                    <input type="number" id="al-hol10" min="0" step="1" value="150" style="padding:6px; border-radius:6px; border:1px solid #90caf9; background:#e3f2fd; color:#0d47a1; font-weight:bold; text-align:center;">
+                  </label>
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>假日加班 12hr (元/天)</span>
+                    <input type="number" id="al-hol12" min="0" step="1" value="225" style="padding:6px; border-radius:6px; border:1px solid #90caf9; background:#e3f2fd; color:#0d47a1; font-weight:bold; text-align:center;">
+                  </label>
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>每月固定津貼 (元/月)</span>
+                    <input type="number" id="al-fixed" min="0" step="1" value="300" style="padding:6px; border-radius:6px; border:1px solid #90caf9; background:#e3f2fd; color:#0d47a1; font-weight:bold; text-align:center;">
+                  </label>
+                </div>
+              </div>
+
+              <!-- ✈️ 外籍員工專屬津貼 -->
+              <div style="border: 1px solid var(--glass-border); border-radius: 8px; overflow: hidden;">
+                <div style="padding: 8px 12px; font-weight: 600; color: var(--color-orange); font-size: 0.95rem;">✈️ 外籍員工專屬津貼</div>
+                <div style="padding: 10px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; background: rgba(255,255,255,0.02);">
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>假日未出勤 補貼 (元/天)</span>
+                    <input type="number" id="al-for-hol-no-ot" min="0" step="1" value="100" style="padding:6px; border-radius:6px; border:1px solid #ffcc80; background:#fff8e1; color:#e65100; font-weight:bold; text-align:center;">
+                  </label>
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-secondary);">
+                    <span>假日加班 8hr 額外補貼</span>
+                    <input type="number" id="al-for-hol8-extra" min="0" step="1" value="50" style="padding:6px; border-radius:6px; border:1px solid #ffcc80; background:#fff8e1; color:#e65100; font-weight:bold; text-align:center;">
+                  </label>
+                </div>
+              </div>
+
+              <!-- 🇹🇼 本國員工專屬津貼 -->
+              <div style="border: 1px solid var(--glass-border); border-radius: 8px; overflow: hidden;">
+                <div style="padding: 8px 12px; font-weight: 600; color: var(--color-green); font-size: 0.95rem;">🇹🇼 本國員工專屬津貼</div>
+                <div style="padding: 8px 12px; background: rgba(255,255,255,0.02); font-size:0.85rem; color:var(--text-muted);">
+                  目前無專屬津貼 (依據勞基法及公司現行規則，皆適用共同津貼)
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+              <button onclick="saveAllowanceSettings()" class="btn-primary" style="padding:9px 20px;">💾 儲存設定</button>
+              <span id="allowance-save-msg" style="font-size:0.9rem; color:var(--color-green); opacity:0; transition:opacity 0.5s;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 查詢區間 + 按鈕 ── -->
         <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
           <span style="color: var(--text-secondary); font-weight: 500;">結算區間:</span>
           <input type="date" id="finance-start" class="form-group"
@@ -461,10 +529,20 @@
           <input type="date" id="finance-end" class="form-group"
             style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
           <button onclick="previewFinance()" class="btn-primary" style="padding: 10px 20px;">🔍 查詢預覽</button>
+          <button onclick="syncFinanceData()" id="finance-sync-btn" class="btn-primary"
+            style="padding: 10px 20px; background: #ff9800; border-color: #f57c00;">🔄 更新加班時數</button>
           <button onclick="exportExcel()" class="btn-primary"
             style="padding: 10px 20px; background: var(--color-green);">📥 匯出 Excel</button>
+          <button onclick="exportOtSummaryExcel()" class="btn-primary"
+            style="padding: 10px 20px; background: #6a0dad;">📊 匯出加班統計 Excel</button>
+          <button onclick="document.getElementById('rules-modal').style.display='flex'" class="btn-primary"
+            title="查看津貼規則"
+            style="padding: 10px; background: transparent; color: var(--text-color); border: 1px solid var(--glass-border); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer;">
+            ❓
+          </button>
         </div>
 
+        <!-- ── 原有每日用餐預覽表 ── -->
         <div class="table-container" style="overflow-x: auto;">
           <table
             style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: center; white-space: nowrap;">
@@ -497,8 +575,20 @@
           </table>
         </div>
 
+        <!-- ── 加班統計預覽表 ── -->
+        <div id="ot-summary-section" style="display:none; margin-top:30px; border-top:1px solid var(--glass-border); padding-top:24px;">
+          <h3 style="margin:0 0 16px; color:var(--text-primary);">📊 假日加班統計預覽</h3>
+          <div style="overflow-x:auto;">
+            <table id="ot-summary-table" style="width:100%; border-collapse:collapse; text-align:center; font-size:0.92rem; white-space:nowrap;">
+              <thead id="ot-summary-thead"></thead>
+              <tbody id="ot-summary-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Inline Cross Check Result -->
-        <div id="crossCheckResult" style="display: none; margin-top: 30px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+        <div id="crossCheckResult"
+          style="display: none; margin-top: 30px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
           <h3 style="color: #e67e22; margin-top: 0;">⚠️ 防弊比對異常報告</h3>
           <p style="color: var(--text-secondary); font-size: 0.95rem;">比對「已預報晚餐」與「HR 實際打卡加班時數」，揪出異常紀錄。</p>
           <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
@@ -520,6 +610,7 @@
       </section>
     </div>
   </div>
+
 
   <!-- Query Tab (Read-Only) -->
   <div id="query-tab" class="tab-content">
@@ -598,6 +689,8 @@
         loadHREmployees();
       } else if (tabId === 'guard') {
         loadMeals();
+      } else if (tabId === 'finance') {
+        loadAllowanceSettings();
       }
     }
 
@@ -1143,7 +1236,7 @@
       const ramadanNamesHtml = ramadanEmps.map(emp => {
         let rStr = '';
         if (emp.ramadanStart && emp.ramadanEnd) {
-           rStr = ` (${formatROCDate(emp.ramadanStart)}~${formatROCDate(emp.ramadanEnd)})`;
+          rStr = ` (${formatROCDate(emp.ramadanStart)}~${formatROCDate(emp.ramadanEnd)})`;
         }
         return `<span>${emp.name}${rStr}</span>`;
       }).join('、');
@@ -1260,6 +1353,39 @@
       }
     }
 
+    async function syncFinanceData() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請先選擇完整的結算區間');
+
+      if (!confirm(`確定要從 HR 系統同步 ${start} 到 ${end} 的加班資料嗎？\n(這只會更新出勤狀態與加班時數，不會覆蓋您手動修改過的便當紀錄)`)) return;
+
+      const btn = document.getElementById('finance-sync-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '🔄 同步中請稍候...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(`/api/finance/sync?startDate=${start}&endDate=${end}`, {
+          method: 'POST'
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert('✅ 同步完成！');
+          previewFinance();
+          previewOtSummary();
+        } else {
+          alert('同步失敗: ' + (result.message || result.error));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('同步發生錯誤');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
     async function previewFinance() {
       const start = document.getElementById('finance-start').value;
       const end = document.getElementById('finance-end').value;
@@ -1334,8 +1460,9 @@
         });
         tbody.innerHTML = html;
 
-        // Auto-run cross check when previewing
+        // Auto-run cross check and OT summary when previewing
         runCrossCheck();
+        previewOtSummary();
 
       } catch (err) {
         alert('預覽失敗: ' + err.message);
@@ -1347,6 +1474,155 @@
       const end = document.getElementById('finance-end').value;
       if (!start || !end) return alert('請選擇完整的查詢區間');
       window.location.href = `/api/export/excel?start=${start}&end=${end}`;
+    }
+
+    function exportOtSummaryExcel() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+      window.location.href = `/api/export/excel/ot-summary?start=${start}&end=${end}`;
+    }
+
+    // ── Allowance Panel ──
+    function toggleAllowancePanel() {
+      const body = document.getElementById('allowance-panel-body');
+      const arrow = document.getElementById('allowance-panel-arrow');
+      const isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+
+    async function loadAllowanceSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const s = await res.json();
+        const set = (id, key, def) => {
+          const el = document.getElementById(id);
+          if (el) el.value = s[key] !== undefined ? s[key] : def;
+        };
+        // Common
+        set('al-ot4',    'common_ot4_allowance',   75);
+        set('al-hol8',   'common_hol8_allowance',   75);
+        set('al-hol10',  'common_hol10_allowance',  150);
+        set('al-hol12',  'common_hol12_allowance',  225);
+        set('al-fixed',  'fixed_monthly_allowance', 300);
+        
+        // Foreign
+        set('al-for-hol-no-ot',  'foreign_hol_no_ot_allowance',  100);
+        set('al-for-hol8-extra', 'foreign_hol8_extra_allowance', 50);
+      } catch (e) {}
+    }
+
+    async function saveAllowanceSettings() {
+      const getVal = id => parseInt(document.getElementById(id)?.value || 0);
+      const settings = {
+        common_ot4_allowance:         getVal('al-ot4'),
+        common_hol8_allowance:        getVal('al-hol8'),
+        common_hol10_allowance:       getVal('al-hol10'),
+        common_hol12_allowance:       getVal('al-hol12'),
+        fixed_monthly_allowance:      getVal('al-fixed'),
+        foreign_hol_no_ot_allowance:  getVal('al-for-hol-no-ot'),
+        foreign_hol8_extra_allowance: getVal('al-for-hol8-extra')
+      };
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings)
+        });
+        const result = await res.json();
+        const msg = document.getElementById('allowance-save-msg');
+        if (msg) {
+          msg.textContent = result.success ? '✅ 已儲存' : '❌ 儲存失敗';
+          msg.style.opacity = '1';
+          setTimeout(() => msg.style.opacity = '0', 2500);
+        }
+        updateAllowanceSums();
+      } catch (e) {
+        alert('儲存失敗: ' + e.message);
+      }
+    }
+
+    // ── OT Summary Preview ──
+    async function previewOtSummary() {
+      const start = document.getElementById('finance-start').value;
+      const end   = document.getElementById('finance-end').value;
+      if (!start || !end) return;
+
+      try {
+        const res = await fetch(`/api/ot-summary/preview?start=${start}&end=${end}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const section = document.getElementById('ot-summary-section');
+        const thead   = document.getElementById('ot-summary-thead');
+        const tbody   = document.getElementById('ot-summary-tbody');
+        section.style.display = 'block';
+
+        const cfg = data.settings;
+        const thStyle  = 'padding:8px 10px; border:1px solid #ccc; font-size:0.85rem; white-space:nowrap;';
+        const thStyleBg = (bg) => `${thStyle} background:${bg}; color:#fff;`;
+
+        thead.innerHTML = `
+          <tr>
+            <th rowspan="2" style="${thStyleBg('#1e3a5f')}">工號</th>
+            <th rowspan="2" style="${thStyleBg('#1e3a5f')}">姓名</th>
+            <th colspan="2" style="${thStyleBg('#2d7dd2')}">假日未加班<br><small>(外勞${cfg.foreignHolNoOt}/天)</small></th>
+            <th colspan="2" style="${thStyleBg('#e67e22')}">假日加班 8hr<br><small>(共同${cfg.commonHol8}外勞+${cfg.foreignHol8Extra})</small></th>
+            <th colspan="2" style="${thStyleBg('#c0392b')}">假日加班 10hr<br><small>(${cfg.commonHol10})</small></th>
+            <th colspan="2" style="${thStyleBg('#8e44ad')}">假日加班 12hr<br><small>(${cfg.commonHol12})</small></th>
+            <th colspan="2" style="${thStyleBg('#00a8ff')}">平日加班 4hr+<br><small>(${cfg.commonOt4}/次)</small></th>
+            <th rowspan="2" style="${thStyleBg('#27ae60')}">固定津貼<br><small>(${cfg.fixedAllowance}/人)</small></th>
+            <th rowspan="2" style="${thStyleBg('#1e3a5f')}">總計</th>
+            <th rowspan="2" style="${thStyleBg('#555')}">備註</th>
+          </tr>
+          <tr>
+            <th style="${thStyle} background:#d6eaf8;">天數</th>
+            <th style="${thStyle} background:#d6eaf8;">合計</th>
+            <th style="${thStyle} background:#fdebd0;">天數</th>
+            <th style="${thStyle} background:#fdebd0;">合計</th>
+            <th style="${thStyle} background:#fadbd8;">天數</th>
+            <th style="${thStyle} background:#fadbd8;">合計</th>
+            <th style="${thStyle} background:#e8daef;">天數</th>
+            <th style="${thStyle} background:#e8daef;">合計</th>
+            <th style="${thStyle} background:#cceeff;">天數</th>
+            <th style="${thStyle} background:#cceeff;">合計</th>
+          </tr>`;
+
+        if (!data.rows || data.rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:30px; color:var(--text-muted);">此區間無假日出勤資料</td></tr>`;
+          return;
+        }
+
+        const tdStyle = 'padding:7px 10px; border:1px solid #ddd; text-align:center;';
+        const dim = v => v === 0 ? `<span style="color:#bbb">0</span>` : `<strong>${v}</strong>`;
+        
+        let html = '';
+        data.rows.forEach(r => {
+          const noteHtml = r.note ? `<span style="color:#cc0000; font-weight:600;">${r.note}</span>` : '';
+          html += `<tr>
+            <td style="${tdStyle}">${r.emp_no}</td>
+            <td style="${tdStyle}">${r.name}</td>
+            <td style="${tdStyle} background:#eaf4fb;">${dim(r.h0_days)}</td>
+            <td style="${tdStyle} background:#eaf4fb;">${dim(r.h0_total)}</td>
+            <td style="${tdStyle} background:#fef5e7;">${dim(r.h8_days)}</td>
+            <td style="${tdStyle} background:#fef5e7;">${dim(r.h8_total)}</td>
+            <td style="${tdStyle} background:#fdedec;">${dim(r.h10_days)}</td>
+            <td style="${tdStyle} background:#fdedec;">${dim(r.h10_total)}</td>
+            <td style="${tdStyle} background:#f4ecf7;">${dim(r.h12_days)}</td>
+            <td style="${tdStyle} background:#f4ecf7;">${dim(r.h12_total)}</td>
+            <td style="${tdStyle} background:#eaf8ff;">${dim(r.w4_days)}</td>
+            <td style="${tdStyle} background:#eaf8ff;">${dim(r.w4_total)}</td>
+            <td style="${tdStyle} background:#eafaf1;">${r.fixed}</td>
+            <td style="${tdStyle} font-weight:700; background:#fffde7;">${r.grand_total}</td>
+            <td style="${tdStyle}">${noteHtml}</td>
+          </tr>`;
+        });
+        tbody.innerHTML = html;
+
+      } catch (err) {
+        console.error('OT Summary preview error:', err);
+      }
     }
 
     async function backendPrint() {
@@ -1565,7 +1841,7 @@
       const startDate = document.getElementById('finance-start').value;
       const endDate = document.getElementById('finance-end').value;
       if (!startDate || !endDate) return alert('請選擇日期區間');
-      
+
       const tbody = document.getElementById('crossCheckTbody');
       tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">比對中...請稍候</td></tr>';
       document.getElementById('crossCheckResult').style.display = 'block';
@@ -1577,9 +1853,9 @@
           body: JSON.stringify({ startDate, endDate })
         });
         const result = await res.json();
-        
+
         if (!result.success) throw new Error(result.error || result.message);
-        
+
         if (!result.anomalies || result.anomalies.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: green; font-weight: bold;">🎉 此區間無異常紀錄</td></tr>';
           return;
@@ -1604,6 +1880,37 @@
       }
     }
   </script>
+
+  <!-- Rules Modal -->
+  <div id="rules-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 2000;">
+    <div style="background: #ffffff; padding: 30px; border-radius: 12px; max-width: 650px; width: 90%; max-height: 85vh; overflow-y: auto; border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+        <h2 style="margin: 0; color: var(--text-primary); font-size: 1.5rem;">📖 公司供餐與津貼發放規則</h2>
+        <button onclick="document.getElementById('rules-modal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+      </div>
+      <div style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;">
+        <h4 style="margin-bottom: 10px; color: var(--color-blue);">【平日加班】</h4>
+        <ul style="margin-top: 0;">
+          <li><strong>滿 2 小時以上：</strong>公司統一供餐。<br><span style="color: var(--text-muted); font-size: 0.85rem;">(例:平日日班16:00~18:00、平日夜班 04:00~06:00)</span></li>
+          <li><strong>滿 4 小時以上：</strong>公司統一供餐外，並貼補 75 元。<br><span style="color: var(--text-muted); font-size: 0.85rem;">(例:平日日班16:00~20:00以後、平日夜班04:00-08:00以後)</span></li>
+        </ul>
+        <h4 style="margin-bottom: 10px; margin-top: 20px; color: var(--color-blue);">【假日加班】</h4>
+        <ul style="margin-top: 0;">
+          <li><strong>滿 8 小時以上：</strong>公司不供餐，提供 75 元誤餐費(1餐)。<br><span style="color: var(--text-muted); font-size: 0.85rem;">(例:假日日班08:00~16:00以後、平日夜班20:00-04:00以後)</span></li>
+          <li><strong>滿 10 小時以上：</strong>公司不供餐，提供 150 元誤餐費(2餐)。<br><span style="color: var(--text-muted); font-size: 0.85rem;">(例:假日日班08:00~18:00以後、平日夜班20:00~次日06:00以後)</span></li>
+          <li><strong>滿 12 小時以上：</strong>公司不供餐，提供 150 元誤餐費(2餐)，並補貼 75 元 (共計 225 元)。<br><span style="color: var(--text-muted); font-size: 0.85rem;">(例:假日日班08:00~20:00以後、平日夜班20:00~次日08:00以後)</span></li>
+        </ul>
+        <h4 style="margin-bottom: 10px; margin-top: 20px; color: var(--color-blue);">【外籍員工專屬補貼】</h4>
+        <ul style="margin-top: 0;">
+          <li><strong>便當公司放假補貼：</strong>外勞平日請假不上班、休息日週末日、颱風天、節日例假日等，因為便當公司放假，會補貼 2 餐的錢共 100 元。<br>
+          <span style="color: #e67e22; font-weight: 500; font-size: 0.85rem;">※ 注意：此補貼僅限於「未出勤加班」時發放。若假日有出勤加班，則依據上述【假日加班】規則發放誤餐費，不再額外發放此 100 元。</span></li>
+        </ul>
+      </div>
+      <div style="margin-top: 25px; text-align: right;">
+        <button onclick="document.getElementById('rules-modal').style.display='none'" class="btn-primary" style="padding: 10px 25px;">確認</button>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
