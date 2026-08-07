@@ -1434,7 +1434,13 @@ async function getOtSummaryData(startStr, endStr) {
         if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
 
         let note = '';
-        if (noHolidayAllowance) note = '不給假日伙食津貼';
+        if (e.is_returning_home && e.no_accommodation) {
+            note = '返鄉、外宿';
+        } else if (e.is_returning_home) {
+            note = '返鄉';
+        } else if (e.no_accommodation) {
+            note = '外宿';
+        }
 
         rows.push({
             emp_no: e.emp_no,
