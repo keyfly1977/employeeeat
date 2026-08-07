@@ -70,6 +70,63 @@ function isConfigured() {
 }
 
 // Helper to authenticate
+const hrCalendarCache = {};
+let isFetchingCalendar = false;
+let globalHrToken = null;
+
+async function ensureHrCalendar(startStr, endStr) {
+    if (!config.USER_ACCOUNT || !config.USER_PWD) return;
+    const startYear = parseInt(startStr.split(/[-\/]/)[0]);
+    const endYear = parseInt(endStr.split(/[-\/]/)[0]);
+    
+    for (let year = startYear; year <= endYear; year++) {
+        if (hrCalendarCache[`${year}/01/01`] !== undefined) continue;
+        
+        while (isFetchingCalendar) {
+            await new Promise(r => setTimeout(r, 100));
+        }
+        if (hrCalendarCache[`${year}/01/01`] !== undefined) continue;
+        
+        isFetchingCalendar = true;
+        try {
+            if (!globalHrToken) {
+                globalHrToken = await getAuthToken(config.USER_ACCOUNT, config.USER_PWD);
+            }
+            
+            const basicRes = await fetch(`${config.HR_API_BASE}/api/am/calendar_basic`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${globalHrToken}` },
+                body: JSON.stringify({ CO_ID: config.CO_ID })
+            });
+            const basicData = await basicRes.json();
+            const basics = basicData.data || [];
+            if (!basics.length) continue;
+            
+            const activeBasic = basics.find(b => b.IS_ACT === 1) || basics[0];
+            const basicId = activeBasic.CALENDAR_BASIC_ID;
+
+            const dayRes = await fetch(`${config.HR_API_BASE}/api/am/calendar_day`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${globalHrToken}` },
+                body: JSON.stringify({ CO_ID: config.CO_ID, CALENDAR_BASIC_ID: basicId, CALENDAR_YEAR: String(year) })
+            });
+            const dayData = await dayRes.json();
+            const days = dayData.data || [];
+            
+            days.forEach(d => {
+                hrCalendarCache[d.CALENDAR_DATE] = [2, 3, 4].includes(d.CALENDAR_LEAVE_ID);
+            });
+            
+            if (hrCalendarCache[`${year}/01/01`] === undefined) {
+                hrCalendarCache[`${year}/01/01`] = false;
+            }
+        } catch (err) {
+            console.error(`Failed to fetch HR calendar for ${year}:`, err);
+            globalHrToken = null;
+        } finally {
+            isFetchingCalendar = false;
+        }
+    }
+}
+
 async function getAuthToken(account, password) {
   const signInBody = {
     account: account,
@@ -693,6 +750,7 @@ app.post('/api/meals/update', (req, res) => {
 });
 
 async function getCrossCheckAnomalies(startStr, endStr) {
+    await ensureHrCalendar(startStr, endStr);
     const dates = getDatesInRange(startStr, endStr);
     if (dates.length === 0) return [];
 
@@ -809,7 +867,7 @@ app.post('/api/meals/cross_check', async (req, res) => {
 });
 
 // Save all meals as a snapshot for today
-app.post('/api/meals/save_all', (req, res) => {
+app.post('/api/meals/save_all', async (req, res) => {
     const { meals } = req.body;
     if (!meals || !Array.isArray(meals)) return res.status(400).json({ error: "Invalid meals data" });
 
@@ -818,6 +876,8 @@ app.post('/api/meals/save_all', (req, res) => {
     const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
     const dd = String(todayObj.getDate()).padStart(2, '0');
     const todayStr = `${yyyy}/${mm}/${dd}`;
+
+    await ensureHrCalendar(todayStr, todayStr);
 
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
@@ -858,7 +918,9 @@ app.post('/api/finance/sync', async (req, res) => {
     const startDateStr = req.query.startDate;
     const endDateStr = req.query.endDate;
     if (!startDateStr || !endDateStr) return res.status(400).json({ error: "Missing dates" });
-
+    await ensureHrCalendar(startDateStr, endDateStr);
+    const dates = getDatesInRange(startDateStr, endDateStr);
+    
     if (!isConfigured()) return res.status(400).json({ error: "API not configured." });
 
     try {
@@ -900,6 +962,7 @@ app.post('/api/finance/sync', async (req, res) => {
         });
 
         // 1. Fetch all data sequentially from HR API
+        await ensureHrCalendar(startDateStr, endDateStr);
         let allMealsToInsert = [];
         for (const d of targetDates) {
             const meals = await getMealsForDate(d, mainToken, otToken, employees, dbEmps, settingsMap);
@@ -991,7 +1054,7 @@ function getDatesInRange(startStr, endStr) {
         const d = String(curr.getDate()).padStart(2, '0');
         const dateStr = `${yyyy}/${m}/${d}`;
         const day = curr.getDay();
-        const isHoliday = (day === 0 || day === 6);
+        const isHoliday = hrCalendarCache[dateStr] ?? (day === 0 || day === 6);
         dates.push({
             date: dateStr,
             label: `${parseInt(m)}/${parseInt(d)}`,
@@ -1318,7 +1381,7 @@ async function getOtSummaryData(startStr, endStr) {
         const mDate = new Date(m.date);
         const day = mDate.getDay();
         const isWeekend = (day === 0 || day === 6);
-        const isHoliday = (m.is_holiday === 1) || isWeekend;
+        const isHoliday = (m.is_holiday === 1) || (hrCalendarCache[m.date.replace(/-/g, '/')] ?? isWeekend);
         
         // 外勞平日請假 (Rule 6)
         const isForeignWeekdayLeave = !isHoliday && e.is_foreign && (m.status === 'leave');
