@@ -711,12 +711,12 @@ app.get('/api/employees', (req, res) => {
     });
 });
 
-// Update allowance status (no accommodation / returning home)
+// Update allowance status (no accommodation / returning home / division)
 app.put('/api/employees/:emp_id/allowance-status', (req, res) => {
     const { emp_id } = req.params;
-    const { no_accommodation, is_returning_home, return_home_start, return_home_end, ramadan_start, ramadan_end } = req.body;
-    db.run(`UPDATE employees SET no_accommodation = ?, is_returning_home = ?, return_home_start = ?, return_home_end = ?, ramadan_start = ?, ramadan_end = ? WHERE emp_id = ?`, 
-        [no_accommodation ? 1 : 0, is_returning_home ? 1 : 0, return_home_start || null, return_home_end || null, ramadan_start || null, ramadan_end || null, emp_id], 
+    const { no_accommodation, is_returning_home, return_home_start, return_home_end, ramadan_start, ramadan_end, division } = req.body;
+    db.run(`UPDATE employees SET no_accommodation = ?, is_returning_home = ?, return_home_start = ?, return_home_end = ?, ramadan_start = ?, ramadan_end = ?, division = ? WHERE emp_id = ?`, 
+        [no_accommodation ? 1 : 0, is_returning_home ? 1 : 0, return_home_start || null, return_home_end || null, ramadan_start || null, ramadan_end || null, division || null, emp_id], 
         function(err) {
             if (err) return res.status(500).json({ success: false, error: err.message });
             cachedData = null;
@@ -1853,6 +1853,1052 @@ app.get('/api/export/excel/ot-summary', async (req, res) => {
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=ot_summary_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Leather Dept + Taiwanese Only OT Summary Excel Export
+app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+
+        const startStr = start.replace(/-/g, '/');
+        const endStr = end.replace(/-/g, '/');
+
+        // --- 取資料 (只篩皮革部門 + 本國員工) ---
+        const db = require('./db');
+        const dbEmps = await new Promise((resolve) => {
+            db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
+        });
+        const dbEmpsMap = {};
+        dbEmps.forEach(e => dbEmpsMap[e.emp_id] = e);
+
+        const settingRows = await new Promise((resolve) => {
+            db.all(`SELECT * FROM settings`, (err, rows) => resolve(rows || []));
+        });
+        const s = {};
+        settingRows.forEach(r => s[r.key] = r.value);
+
+        const fixedAllowance = parseInt(s['fixed_monthly_allowance'] || 300);
+        const commonOt4  = parseInt(s['common_ot4_allowance']  || 75);
+        const commonHol8 = parseInt(s['common_hol8_allowance'] || 75);
+        const commonHol10 = parseInt(s['common_hol10_allowance'] || 150);
+        const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
+        const foreignHolNoOt   = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
+        const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+
+        const dates = getDatesInRange(startStr, endStr);
+        if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
+
+        const placeholders = dates.map(() => '?').join(',');
+        const dateStrings = dates.map(d => d.date);
+
+        const records = await new Promise((resolve) => {
+            db.all(`SELECT * FROM meal_records WHERE date IN (${placeholders})`, dateStrings, (err, rows) => resolve(rows || []));
+        });
+
+        const empMap = {};
+        records.forEach(m => {
+            const dbEmp = dbEmpsMap[m.emp_id];
+            if (!dbEmp) return;
+            // 只保留「皮革廠」且「本國員工」
+            // T1/T2 開頭 = 皮革; T7 外勞靠 division 欄位判斷
+            const empNo = dbEmp.emp_no || '';
+            let isLeatherDiv = empNo.startsWith('T1') || empNo.startsWith('T2');
+            if (!isLeatherDiv && dbEmp.division) isLeatherDiv = (dbEmp.division === '皮革');
+            if (!isLeatherDiv) return;
+            if (dbEmp.is_foreign === 1) return;
+            if (empNo.startsWith('J')) return;
+            if (dbEmp.department && dbEmp.department.includes('董事')) return;
+
+            if (!empMap[m.emp_id]) {
+                empMap[m.emp_id] = {
+                    emp_no: dbEmp.emp_no,
+                    name: dbEmp.name,
+                    department: dbEmp.department,
+                    is_foreign: false,
+                    is_returning_home: dbEmp.is_returning_home === 1,
+                    no_accommodation: dbEmp.no_accommodation === 1,
+                    w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
+                };
+            }
+
+            const e = empMap[m.emp_id];
+            const mDate = new Date(m.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            const isHoliday = (m.is_holiday === 1) || (hrCalendarCache[m.date.replace(/-/g, '/')] ?? isWeekend);
+            const otHours = parseFloat(m.ot_hours) || 0;
+
+            if (isHoliday) {
+                if (otHours >= 12) e.h12++;
+                else if (otHours >= 10) e.h10++;
+                else if (otHours >= 8) e.h8++;
+                else e.h0++;
+            } else {
+                if (otHours >= 4) e.w4++;
+            }
+        });
+
+        const dataRows = [];
+        Object.values(empMap).forEach(e => {
+            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const w4Total  = e.w4  * commonOt4;
+            const h0Total  = 0;  // 本國員工不計假日未加班補貼
+            const h8Total  = e.h8  * commonHol8;
+            const h10Total = e.h10 * commonHol10;
+            const h12Total = e.h12 * commonHol12;
+            const fixed = noHolidayAllowance ? 0 : fixedAllowance;
+            const grandTotal = w4Total + h8Total + h10Total + h12Total + fixed;
+
+            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+
+            let note = '';
+            if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
+            else if (e.is_returning_home) note = '返鄉';
+            else if (e.no_accommodation) note = '外宿';
+
+            dataRows.push({
+                emp_no: e.emp_no, name: e.name, department: e.department,
+                w4_days: e.w4, w4_total: w4Total,
+                h0_days: e.h0, h0_total: h0Total,
+                h8_days: e.h8, h8_total: h8Total,
+                h10_days: e.h10, h10_total: h10Total,
+                h12_days: e.h12, h12_total: h12Total,
+                fixed, grand_total: grandTotal, note
+            });
+        });
+        dataRows.sort((a, b) => (a.emp_no || '').localeCompare(b.emp_no || ''));
+
+        // --- 產生 Excel ---
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('皮革本國加班統計');
+        sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+
+        const row1 = sheet.addRow([
+            '工號', '姓名',
+            '假日未加班', '',
+            '假日加班8hr', '',
+            '假日加班10hr', '',
+            '假日加班12hr', '',
+            '平日加班4hr+', '',
+            `固定津貼\n${fixedAllowance}/人`,
+            '總計', '備註'
+        ]);
+        const row2 = sheet.addRow([
+            '工號', '姓名',
+            '天數', `補貼合計\n(本國員工不適用)`,
+            '天數', `合計\n(共同${commonHol8}/天)`,
+            '天數', `合計\n(${commonHol10}/天)`,
+            '天數', `合計\n(${commonHol12}/天)`,
+            '天數', `合計\n(${commonOt4}/次)`,
+            '', '總計', '備註'
+        ]);
+
+        sheet.mergeCells('A1:A2'); sheet.mergeCells('B1:B2');
+        sheet.mergeCells('C1:D1'); sheet.mergeCells('E1:F1');
+        sheet.mergeCells('G1:H1'); sheet.mergeCells('I1:J1');
+        sheet.mergeCells('K1:L1'); sheet.mergeCells('M1:M2');
+        sheet.mergeCells('N1:N2'); sheet.mergeCells('O1:O2');
+
+        sheet.columns = [
+            { key: 'emp_no',      width: 12 }, { key: 'name',       width: 12 },
+            { key: 'h0_days',     width: 9  }, { key: 'h0_total',   width: 16 },
+            { key: 'h8_days',     width: 9  }, { key: 'h8_total',   width: 14 },
+            { key: 'h10_days',    width: 10 }, { key: 'h10_total',  width: 14 },
+            { key: 'h12_days',    width: 10 }, { key: 'h12_total',  width: 14 },
+            { key: 'w4_days',     width: 10 }, { key: 'w4_total',   width: 14 },
+            { key: 'fixed',       width: 12 }, { key: 'grand_total',width: 12 },
+            { key: 'note',        width: 20 }
+        ];
+
+        const headerFill    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        const subHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A9E' } };
+        const headerFont  = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+        const centerAlign = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+        [row1, row2].forEach((r, idx) => {
+            r.height = 32;
+            r.eachCell(cell => {
+                cell.fill = idx === 0 ? headerFill : subHeaderFill;
+                cell.font = headerFont;
+                cell.alignment = centerAlign;
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+        });
+
+        const groupColors = {
+            C: 'FFE8F4FD', D: 'FFE8F4FD',
+            E: 'FFFFE0B2', F: 'FFFFE0B2',
+            G: 'FFFCE4EC', H: 'FFFCE4EC',
+            I: 'FFEDE7F6', J: 'FFEDE7F6',
+            K: 'FFE8F8FF', L: 'FFE8F8FF',
+        };
+
+        dataRows.forEach(r => {
+            const excelRow = sheet.addRow({
+                emp_no: r.emp_no, name: r.name,
+                h0_days: r.h0_days, h0_total: r.h0_total,
+                h8_days: r.h8_days, h8_total: r.h8_total,
+                h10_days: r.h10_days, h10_total: r.h10_total,
+                h12_days: r.h12_days, h12_total: r.h12_total,
+                w4_days: r.w4_days, w4_total: r.w4_total,
+                fixed: r.fixed, grand_total: r.grand_total, note: r.note
+            });
+            excelRow.height = 22;
+            const borderStyle = { style: 'thin', color: { argb: 'FFCCCCCC' } };
+            const thinBorder = { top: borderStyle, left: borderStyle, bottom: borderStyle, right: borderStyle };
+            excelRow.eachCell((cell, colNum) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = thinBorder;
+                const colLetter = String.fromCharCode(64 + colNum);
+                if (groupColors[colLetter]) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: groupColors[colLetter] } };
+                }
+            });
+            excelRow.getCell('grand_total').font = { bold: true };
+            excelRow.getCell('grand_total').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+            if (r.note) {
+                const noteCell = excelRow.getCell('note');
+                noteCell.font = { color: { argb: 'FFCC0000' }, bold: true };
+                noteCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3F3' } };
+            }
+            ['h0_days', 'h8_days', 'h10_days', 'h12_days'].forEach(k => {
+                if (r[k] === 0) {
+                    const col = { h0_days: 'C', h8_days: 'E', h10_days: 'G', h12_days: 'I' }[k];
+                    excelRow.getCell(col).font = { color: { argb: 'FFAAAAAA' } };
+                }
+            });
+        });
+
+        if (dataRows.length > 0) {
+            const startDataRow = 3;
+            const endDataRow = 2 + dataRows.length;
+            const footerRow = sheet.addRow([
+                '合計', '',
+                { formula: `SUM(C${startDataRow}:C${endDataRow})` },
+                { formula: `SUM(D${startDataRow}:D${endDataRow})` },
+                { formula: `SUM(E${startDataRow}:E${endDataRow})` },
+                { formula: `SUM(F${startDataRow}:F${endDataRow})` },
+                { formula: `SUM(G${startDataRow}:G${endDataRow})` },
+                { formula: `SUM(H${startDataRow}:H${endDataRow})` },
+                { formula: `SUM(I${startDataRow}:I${endDataRow})` },
+                { formula: `SUM(J${startDataRow}:J${endDataRow})` },
+                { formula: `SUM(K${startDataRow}:K${endDataRow})` },
+                { formula: `SUM(L${startDataRow}:L${endDataRow})` },
+                ''
+            ]);
+            footerRow.height = 22;
+            footerRow.font = { bold: true };
+            footerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            footerRow.eachCell(cell => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'medium' },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium' },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            sheet.mergeCells(`A${endDataRow + 1}:B${endDataRow + 1}`);
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=ot_leather_tw_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Leather Dept + Foreign Workers Only OT Summary Excel Export
+app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+
+        const startStr = start.replace(/-/g, '/');
+        const endStr = end.replace(/-/g, '/');
+
+        const db = require('./db');
+        const dbEmps = await new Promise((resolve) => {
+            db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
+        });
+        const dbEmpsMap = {};
+        dbEmps.forEach(e => dbEmpsMap[e.emp_id] = e);
+
+        const settingRows = await new Promise((resolve) => {
+            db.all(`SELECT * FROM settings`, (err, rows) => resolve(rows || []));
+        });
+        const s = {};
+        settingRows.forEach(r => s[r.key] = r.value);
+
+        const fixedAllowance  = parseInt(s['fixed_monthly_allowance'] || 300);
+        const commonOt4       = parseInt(s['common_ot4_allowance']    || 75);
+        const commonHol8      = parseInt(s['common_hol8_allowance']   || 75);
+        const commonHol10     = parseInt(s['common_hol10_allowance']  || 150);
+        const commonHol12     = parseInt(s['common_hol12_allowance']  || 225);
+        const foreignHolNoOt  = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
+        const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+
+        const dates = getDatesInRange(startStr, endStr);
+        if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
+
+        const placeholders = dates.map(() => '?').join(',');
+        const dateStrings = dates.map(d => d.date);
+
+        const records = await new Promise((resolve) => {
+            db.all(`SELECT * FROM meal_records WHERE date IN (${placeholders})`, dateStrings, (err, rows) => resolve(rows || []));
+        });
+
+        const empMap = {};
+        records.forEach(m => {
+            const dbEmp = dbEmpsMap[m.emp_id];
+            if (!dbEmp) return;
+            // 只保留「皮革廠」且「外籍員工」
+            // T1/T2 開頭 = 皮革; T7 外勞靠 division 欄位判斷
+            const empNo = dbEmp.emp_no || '';
+            let isLeatherDiv = empNo.startsWith('T1') || empNo.startsWith('T2');
+            if (!isLeatherDiv && dbEmp.division) isLeatherDiv = (dbEmp.division === '皮革');
+            if (!isLeatherDiv) return;
+            if (dbEmp.is_foreign !== 1) return;
+            if (empNo.startsWith('J')) return;
+            if (dbEmp.department && dbEmp.department.includes('董事')) return;
+
+            if (!empMap[m.emp_id]) {
+                empMap[m.emp_id] = {
+                    emp_no: dbEmp.emp_no,
+                    name: dbEmp.name,
+                    department: dbEmp.department,
+                    is_foreign: true,
+                    is_returning_home: dbEmp.is_returning_home === 1,
+                    no_accommodation: dbEmp.no_accommodation === 1,
+                    w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
+                };
+            }
+
+            const e = empMap[m.emp_id];
+            const mDate = new Date(m.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            const isHoliday = (m.is_holiday === 1) || (hrCalendarCache[m.date.replace(/-/g, '/')] ?? isWeekend);
+            const otHours = parseFloat(m.ot_hours) || 0;
+            const isForeignWeekdayLeave = !isHoliday && (m.status === 'leave');
+
+            if (isHoliday) {
+                if (otHours >= 12) e.h12++;
+                else if (otHours >= 10) e.h10++;
+                else if (otHours >= 8) e.h8++;
+                else e.h0++;
+            } else {
+                if (isForeignWeekdayLeave) e.h0++; // 外勞平日請假視同假日未加班
+                else if (otHours >= 4) e.w4++;
+            }
+        });
+
+        const dataRows = [];
+        Object.values(empMap).forEach(e => {
+            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const isEligibleForeigner = !noHolidayAllowance;
+            const w4Total  = e.w4  * commonOt4;
+            const h0Total  = e.h0  * (isEligibleForeigner ? foreignHolNoOt : 0);
+            const h8Total  = e.h8  * (commonHol8 + (isEligibleForeigner ? foreignHol8Extra : 0));
+            const h10Total = e.h10 * commonHol10;
+            const h12Total = e.h12 * commonHol12;
+            const fixed = noHolidayAllowance ? 0 : fixedAllowance;
+            const grandTotal = w4Total + h0Total + h8Total + h10Total + h12Total + fixed;
+
+            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+
+            let note = '';
+            if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
+            else if (e.is_returning_home) note = '返鄉';
+            else if (e.no_accommodation) note = '外宿';
+
+            dataRows.push({
+                emp_no: e.emp_no, name: e.name, department: e.department,
+                w4_days: e.w4, w4_total: w4Total,
+                h0_days: e.h0, h0_total: h0Total,
+                h8_days: e.h8, h8_total: h8Total,
+                h10_days: e.h10, h10_total: h10Total,
+                h12_days: e.h12, h12_total: h12Total,
+                fixed, grand_total: grandTotal, note
+            });
+        });
+        dataRows.sort((a, b) => (a.emp_no || '').localeCompare(b.emp_no || ''));
+
+        // --- 產生 Excel ---
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('皮革外勞加班統計');
+        sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+
+        const row1 = sheet.addRow([
+            '工號', '姓名',
+            '假日未加班', '',
+            '假日加班8hr', '',
+            '假日加班10hr', '',
+            '假日加班12hr', '',
+            '平日加班4hr+', '',
+            `固定津貼\n${fixedAllowance}/人`,
+            '總計', '備註'
+        ]);
+        const row2 = sheet.addRow([
+            '工號', '姓名',
+            '天數', `補貼合計\n(外勞${foreignHolNoOt}/天)`,
+            '天數', `合計\n(共同${commonHol8}+外勞+${foreignHol8Extra})`,
+            '天數', `合計\n(${commonHol10}/天)`,
+            '天數', `合計\n(${commonHol12}/天)`,
+            '天數', `合計\n(${commonOt4}/次)`,
+            '', '總計', '備註'
+        ]);
+
+        sheet.mergeCells('A1:A2'); sheet.mergeCells('B1:B2');
+        sheet.mergeCells('C1:D1'); sheet.mergeCells('E1:F1');
+        sheet.mergeCells('G1:H1'); sheet.mergeCells('I1:J1');
+        sheet.mergeCells('K1:L1'); sheet.mergeCells('M1:M2');
+        sheet.mergeCells('N1:N2'); sheet.mergeCells('O1:O2');
+
+        sheet.columns = [
+            { key: 'emp_no',      width: 12 }, { key: 'name',       width: 12 },
+            { key: 'h0_days',     width: 9  }, { key: 'h0_total',   width: 16 },
+            { key: 'h8_days',     width: 9  }, { key: 'h8_total',   width: 18 },
+            { key: 'h10_days',    width: 10 }, { key: 'h10_total',  width: 14 },
+            { key: 'h12_days',    width: 10 }, { key: 'h12_total',  width: 14 },
+            { key: 'w4_days',     width: 10 }, { key: 'w4_total',   width: 14 },
+            { key: 'fixed',       width: 12 }, { key: 'grand_total',width: 12 },
+            { key: 'note',        width: 20 }
+        ];
+
+        const headerFill    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        const subHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A9E' } };
+        const headerFont  = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+        const centerAlign = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+        [row1, row2].forEach((r, idx) => {
+            r.height = 32;
+            r.eachCell(cell => {
+                cell.fill = idx === 0 ? headerFill : subHeaderFill;
+                cell.font = headerFont;
+                cell.alignment = centerAlign;
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+        });
+
+        const groupColors = {
+            C: 'FFE8F4FD', D: 'FFE8F4FD',
+            E: 'FFFFE0B2', F: 'FFFFE0B2',
+            G: 'FFFCE4EC', H: 'FFFCE4EC',
+            I: 'FFEDE7F6', J: 'FFEDE7F6',
+            K: 'FFE8F8FF', L: 'FFE8F8FF',
+        };
+
+        dataRows.forEach(r => {
+            const excelRow = sheet.addRow({
+                emp_no: r.emp_no, name: r.name,
+                h0_days: r.h0_days, h0_total: r.h0_total,
+                h8_days: r.h8_days, h8_total: r.h8_total,
+                h10_days: r.h10_days, h10_total: r.h10_total,
+                h12_days: r.h12_days, h12_total: r.h12_total,
+                w4_days: r.w4_days, w4_total: r.w4_total,
+                fixed: r.fixed, grand_total: r.grand_total, note: r.note
+            });
+            excelRow.height = 22;
+            const borderStyle = { style: 'thin', color: { argb: 'FFCCCCCC' } };
+            const thinBorder = { top: borderStyle, left: borderStyle, bottom: borderStyle, right: borderStyle };
+            excelRow.eachCell((cell, colNum) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = thinBorder;
+                const colLetter = String.fromCharCode(64 + colNum);
+                if (groupColors[colLetter]) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: groupColors[colLetter] } };
+                }
+            });
+            excelRow.getCell('grand_total').font = { bold: true };
+            excelRow.getCell('grand_total').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+            if (r.note) {
+                const noteCell = excelRow.getCell('note');
+                noteCell.font = { color: { argb: 'FFCC0000' }, bold: true };
+                noteCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3F3' } };
+            }
+            ['h0_days', 'h8_days', 'h10_days', 'h12_days'].forEach(k => {
+                if (r[k] === 0) {
+                    const col = { h0_days: 'C', h8_days: 'E', h10_days: 'G', h12_days: 'I' }[k];
+                    excelRow.getCell(col).font = { color: { argb: 'FFAAAAAA' } };
+                }
+            });
+        });
+
+        if (dataRows.length > 0) {
+            const startDataRow = 3;
+            const endDataRow = 2 + dataRows.length;
+            const footerRow = sheet.addRow([
+                '合計', '',
+                { formula: `SUM(C${startDataRow}:C${endDataRow})` },
+                { formula: `SUM(D${startDataRow}:D${endDataRow})` },
+                { formula: `SUM(E${startDataRow}:E${endDataRow})` },
+                { formula: `SUM(F${startDataRow}:F${endDataRow})` },
+                { formula: `SUM(G${startDataRow}:G${endDataRow})` },
+                { formula: `SUM(H${startDataRow}:H${endDataRow})` },
+                { formula: `SUM(I${startDataRow}:I${endDataRow})` },
+                { formula: `SUM(J${startDataRow}:J${endDataRow})` },
+                { formula: `SUM(K${startDataRow}:K${endDataRow})` },
+                { formula: `SUM(L${startDataRow}:L${endDataRow})` },
+                ''
+            ]);
+            footerRow.height = 22;
+            footerRow.font = { bold: true };
+            footerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            footerRow.eachCell(cell => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'medium' },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium' },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            sheet.mergeCells(`A${endDataRow + 1}:B${endDataRow + 1}`);
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=ot_leather_fr_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Textile Dept + Taiwanese Only OT Summary Excel Export
+app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+
+        const startStr = start.replace(/-/g, '/');
+        const endStr = end.replace(/-/g, '/');
+
+        // --- 取資料 (只篩紡織部門 + 本國員工) ---
+        const db = require('./db');
+        const dbEmps = await new Promise((resolve) => {
+            db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
+        });
+        const dbEmpsMap = {};
+        dbEmps.forEach(e => dbEmpsMap[e.emp_id] = e);
+
+        const settingRows = await new Promise((resolve) => {
+            db.all(`SELECT * FROM settings`, (err, rows) => resolve(rows || []));
+        });
+        const s = {};
+        settingRows.forEach(r => s[r.key] = r.value);
+
+        const fixedAllowance = parseInt(s['fixed_monthly_allowance'] || 300);
+        const commonOt4  = parseInt(s['common_ot4_allowance']  || 75);
+        const commonHol8 = parseInt(s['common_hol8_allowance'] || 75);
+        const commonHol10 = parseInt(s['common_hol10_allowance'] || 150);
+        const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
+        const foreignHolNoOt   = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
+        const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+
+        const dates = getDatesInRange(startStr, endStr);
+        if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
+
+        const placeholders = dates.map(() => '?').join(',');
+        const dateStrings = dates.map(d => d.date);
+
+        const records = await new Promise((resolve) => {
+            db.all(`SELECT * FROM meal_records WHERE date IN (${placeholders})`, dateStrings, (err, rows) => resolve(rows || []));
+        });
+
+        const empMap = {};
+        records.forEach(m => {
+            const dbEmp = dbEmpsMap[m.emp_id];
+            if (!dbEmp) return;
+            // 只保留「紡織廠」且「本國員工」
+            // T4 開頭 = 紡織; T7 外勞靠 division 欄位判斷
+            const empNo = dbEmp.emp_no || '';
+            let isTextileDiv = empNo.startsWith('T4');
+            if (!isTextileDiv && dbEmp.division) isTextileDiv = (dbEmp.division === '紡織');
+            if (!isTextileDiv) return;
+            if (dbEmp.is_foreign === 1) return;
+            if (empNo.startsWith('J')) return;
+            if (dbEmp.department && dbEmp.department.includes('董事')) return;
+
+            if (!empMap[m.emp_id]) {
+                empMap[m.emp_id] = {
+                    emp_no: dbEmp.emp_no,
+                    name: dbEmp.name,
+                    department: dbEmp.department,
+                    is_foreign: false,
+                    is_returning_home: dbEmp.is_returning_home === 1,
+                    no_accommodation: dbEmp.no_accommodation === 1,
+                    w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
+                };
+            }
+
+            const e = empMap[m.emp_id];
+            const mDate = new Date(m.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            const isHoliday = (m.is_holiday === 1) || (hrCalendarCache[m.date.replace(/-/g, '/')] ?? isWeekend);
+            const otHours = parseFloat(m.ot_hours) || 0;
+
+            if (isHoliday) {
+                if (otHours >= 12) e.h12++;
+                else if (otHours >= 10) e.h10++;
+                else if (otHours >= 8) e.h8++;
+                else e.h0++;
+            } else {
+                if (otHours >= 4) e.w4++;
+            }
+        });
+
+        const dataRows = [];
+        Object.values(empMap).forEach(e => {
+            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const w4Total  = e.w4  * commonOt4;
+            const h0Total  = 0;  // 本國員工不計假日未加班補貼
+            const h8Total  = e.h8  * commonHol8;
+            const h10Total = e.h10 * commonHol10;
+            const h12Total = e.h12 * commonHol12;
+            const fixed = noHolidayAllowance ? 0 : fixedAllowance;
+            const grandTotal = w4Total + h8Total + h10Total + h12Total + fixed;
+
+            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+
+            let note = '';
+            if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
+            else if (e.is_returning_home) note = '返鄉';
+            else if (e.no_accommodation) note = '外宿';
+
+            dataRows.push({
+                emp_no: e.emp_no, name: e.name, department: e.department,
+                w4_days: e.w4, w4_total: w4Total,
+                h0_days: e.h0, h0_total: h0Total,
+                h8_days: e.h8, h8_total: h8Total,
+                h10_days: e.h10, h10_total: h10Total,
+                h12_days: e.h12, h12_total: h12Total,
+                fixed, grand_total: grandTotal, note
+            });
+        });
+        dataRows.sort((a, b) => (a.emp_no || '').localeCompare(b.emp_no || ''));
+
+        // --- 產生 Excel ---
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('紡織本國加班統計');
+        sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+
+        const row1 = sheet.addRow([
+            '工號', '姓名',
+            '假日未加班', '',
+            '假日加班8hr', '',
+            '假日加班10hr', '',
+            '假日加班12hr', '',
+            '平日加班4hr+', '',
+            `固定津貼\n${fixedAllowance}/人`,
+            '總計', '備註'
+        ]);
+        const row2 = sheet.addRow([
+            '工號', '姓名',
+            '天數', `補貼合計\n(本國員工不適用)`,
+            '天數', `合計\n(共同${commonHol8}/天)`,
+            '天數', `合計\n(${commonHol10}/天)`,
+            '天數', `合計\n(${commonHol12}/天)`,
+            '天數', `合計\n(${commonOt4}/次)`,
+            '', '總計', '備註'
+        ]);
+
+        sheet.mergeCells('A1:A2'); sheet.mergeCells('B1:B2');
+        sheet.mergeCells('C1:D1'); sheet.mergeCells('E1:F1');
+        sheet.mergeCells('G1:H1'); sheet.mergeCells('I1:J1');
+        sheet.mergeCells('K1:L1'); sheet.mergeCells('M1:M2');
+        sheet.mergeCells('N1:N2'); sheet.mergeCells('O1:O2');
+
+        sheet.columns = [
+            { key: 'emp_no',      width: 12 }, { key: 'name',       width: 12 },
+            { key: 'h0_days',     width: 9  }, { key: 'h0_total',   width: 16 },
+            { key: 'h8_days',     width: 9  }, { key: 'h8_total',   width: 14 },
+            { key: 'h10_days',    width: 10 }, { key: 'h10_total',  width: 14 },
+            { key: 'h12_days',    width: 10 }, { key: 'h12_total',  width: 14 },
+            { key: 'w4_days',     width: 10 }, { key: 'w4_total',   width: 14 },
+            { key: 'fixed',       width: 12 }, { key: 'grand_total',width: 12 },
+            { key: 'note',        width: 20 }
+        ];
+
+        const headerFill    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        const subHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A9E' } };
+        const headerFont  = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+        const centerAlign = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+        [row1, row2].forEach((r, idx) => {
+            r.height = 32;
+            r.eachCell(cell => {
+                cell.fill = idx === 0 ? headerFill : subHeaderFill;
+                cell.font = headerFont;
+                cell.alignment = centerAlign;
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+        });
+
+        const groupColors = {
+            C: 'FFE8F4FD', D: 'FFE8F4FD',
+            E: 'FFFFE0B2', F: 'FFFFE0B2',
+            G: 'FFFCE4EC', H: 'FFFCE4EC',
+            I: 'FFEDE7F6', J: 'FFEDE7F6',
+            K: 'FFE8F8FF', L: 'FFE8F8FF',
+        };
+
+        dataRows.forEach(r => {
+            const excelRow = sheet.addRow({
+                emp_no: r.emp_no, name: r.name,
+                h0_days: r.h0_days, h0_total: r.h0_total,
+                h8_days: r.h8_days, h8_total: r.h8_total,
+                h10_days: r.h10_days, h10_total: r.h10_total,
+                h12_days: r.h12_days, h12_total: r.h12_total,
+                w4_days: r.w4_days, w4_total: r.w4_total,
+                fixed: r.fixed, grand_total: r.grand_total, note: r.note
+            });
+            excelRow.height = 22;
+            const borderStyle = { style: 'thin', color: { argb: 'FFCCCCCC' } };
+            const thinBorder = { top: borderStyle, left: borderStyle, bottom: borderStyle, right: borderStyle };
+            excelRow.eachCell((cell, colNum) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = thinBorder;
+                const colLetter = String.fromCharCode(64 + colNum);
+                if (groupColors[colLetter]) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: groupColors[colLetter] } };
+                }
+            });
+            excelRow.getCell('grand_total').font = { bold: true };
+            excelRow.getCell('grand_total').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+            if (r.note) {
+                const noteCell = excelRow.getCell('note');
+                noteCell.font = { color: { argb: 'FFCC0000' }, bold: true };
+                noteCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3F3' } };
+            }
+            ['h0_days', 'h8_days', 'h10_days', 'h12_days'].forEach(k => {
+                if (r[k] === 0) {
+                    const col = { h0_days: 'C', h8_days: 'E', h10_days: 'G', h12_days: 'I' }[k];
+                    excelRow.getCell(col).font = { color: { argb: 'FFAAAAAA' } };
+                }
+            });
+        });
+
+        if (dataRows.length > 0) {
+            const startDataRow = 3;
+            const endDataRow = 2 + dataRows.length;
+            const footerRow = sheet.addRow([
+                '合計', '',
+                { formula: `SUM(C${startDataRow}:C${endDataRow})` },
+                { formula: `SUM(D${startDataRow}:D${endDataRow})` },
+                { formula: `SUM(E${startDataRow}:E${endDataRow})` },
+                { formula: `SUM(F${startDataRow}:F${endDataRow})` },
+                { formula: `SUM(G${startDataRow}:G${endDataRow})` },
+                { formula: `SUM(H${startDataRow}:H${endDataRow})` },
+                { formula: `SUM(I${startDataRow}:I${endDataRow})` },
+                { formula: `SUM(J${startDataRow}:J${endDataRow})` },
+                { formula: `SUM(K${startDataRow}:K${endDataRow})` },
+                { formula: `SUM(L${startDataRow}:L${endDataRow})` },
+                ''
+            ]);
+            footerRow.height = 22;
+            footerRow.font = { bold: true };
+            footerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            footerRow.eachCell(cell => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'medium' },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium' },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            sheet.mergeCells(`A${endDataRow + 1}:B${endDataRow + 1}`);
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=ot_textile_tw_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// Textile Dept + Foreign Workers Only OT Summary Excel Export
+app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) return res.status(400).json({ error: "Missing start or end param" });
+
+        const startStr = start.replace(/-/g, '/');
+        const endStr = end.replace(/-/g, '/');
+
+        const db = require('./db');
+        const dbEmps = await new Promise((resolve) => {
+            db.all(`SELECT * FROM employees`, (err, rows) => resolve(rows || []));
+        });
+        const dbEmpsMap = {};
+        dbEmps.forEach(e => dbEmpsMap[e.emp_id] = e);
+
+        const settingRows = await new Promise((resolve) => {
+            db.all(`SELECT * FROM settings`, (err, rows) => resolve(rows || []));
+        });
+        const s = {};
+        settingRows.forEach(r => s[r.key] = r.value);
+
+        const fixedAllowance  = parseInt(s['fixed_monthly_allowance'] || 300);
+        const commonOt4       = parseInt(s['common_ot4_allowance']    || 75);
+        const commonHol8      = parseInt(s['common_hol8_allowance']   || 75);
+        const commonHol10     = parseInt(s['common_hol10_allowance']  || 150);
+        const commonHol12     = parseInt(s['common_hol12_allowance']  || 225);
+        const foreignHolNoOt  = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
+        const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+
+        const dates = getDatesInRange(startStr, endStr);
+        if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
+
+        const placeholders = dates.map(() => '?').join(',');
+        const dateStrings = dates.map(d => d.date);
+
+        const records = await new Promise((resolve) => {
+            db.all(`SELECT * FROM meal_records WHERE date IN (${placeholders})`, dateStrings, (err, rows) => resolve(rows || []));
+        });
+
+        const empMap = {};
+        records.forEach(m => {
+            const dbEmp = dbEmpsMap[m.emp_id];
+            if (!dbEmp) return;
+            // 只保留「紡織廠」且「外籍員工」
+            const empNo = dbEmp.emp_no || '';
+            let isTextileDiv = empNo.startsWith('T4');
+            if (!isTextileDiv && dbEmp.division) isTextileDiv = (dbEmp.division === '紡織');
+            if (!isTextileDiv) return;
+            if (dbEmp.is_foreign !== 1) return;
+            if (empNo.startsWith('J')) return;
+            if (dbEmp.department && dbEmp.department.includes('董事')) return;
+
+            if (!empMap[m.emp_id]) {
+                empMap[m.emp_id] = {
+                    emp_no: dbEmp.emp_no,
+                    name: dbEmp.name,
+                    department: dbEmp.department,
+                    is_foreign: true,
+                    is_returning_home: dbEmp.is_returning_home === 1,
+                    no_accommodation: dbEmp.no_accommodation === 1,
+                    w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
+                };
+            }
+
+            const e = empMap[m.emp_id];
+            const mDate = new Date(m.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            const isHoliday = (m.is_holiday === 1) || (hrCalendarCache[m.date.replace(/-/g, '/')] ?? isWeekend);
+            const otHours = parseFloat(m.ot_hours) || 0;
+            const isForeignWeekdayLeave = !isHoliday && (m.status === 'leave');
+
+            if (isHoliday) {
+                if (otHours >= 12) e.h12++;
+                else if (otHours >= 10) e.h10++;
+                else if (otHours >= 8) e.h8++;
+                else e.h0++;
+            } else {
+                if (isForeignWeekdayLeave) e.h0++; // 外勞平日請假視同假日未加班
+                else if (otHours >= 4) e.w4++;
+            }
+        });
+
+        const dataRows = [];
+        Object.values(empMap).forEach(e => {
+            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const isEligibleForeigner = !noHolidayAllowance;
+            const w4Total  = e.w4  * commonOt4;
+            const h0Total  = e.h0  * (isEligibleForeigner ? foreignHolNoOt : 0);
+            const h8Total  = e.h8  * (commonHol8 + (isEligibleForeigner ? foreignHol8Extra : 0));
+            const h10Total = e.h10 * commonHol10;
+            const h12Total = e.h12 * commonHol12;
+            const fixed = noHolidayAllowance ? 0 : fixedAllowance;
+            const grandTotal = w4Total + h0Total + h8Total + h10Total + h12Total + fixed;
+
+            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+
+            let note = '';
+            if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
+            else if (e.is_returning_home) note = '返鄉';
+            else if (e.no_accommodation) note = '外宿';
+
+            dataRows.push({
+                emp_no: e.emp_no, name: e.name, department: e.department,
+                w4_days: e.w4, w4_total: w4Total,
+                h0_days: e.h0, h0_total: h0Total,
+                h8_days: e.h8, h8_total: h8Total,
+                h10_days: e.h10, h10_total: h10Total,
+                h12_days: e.h12, h12_total: h12Total,
+                fixed, grand_total: grandTotal, note
+            });
+        });
+        dataRows.sort((a, b) => (a.emp_no || '').localeCompare(b.emp_no || ''));
+
+        // --- 產生 Excel ---
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('紡織外勞加班統計');
+        sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+
+        const row1 = sheet.addRow([
+            '工號', '姓名',
+            '假日未加班', '',
+            '假日加班8hr', '',
+            '假日加班10hr', '',
+            '假日加班12hr', '',
+            '平日加班4hr+', '',
+            `固定津貼\n${fixedAllowance}/人`,
+            '總計', '備註'
+        ]);
+        const row2 = sheet.addRow([
+            '工號', '姓名',
+            '天數', `補貼合計\n(外勞${foreignHolNoOt}/天)`,
+            '天數', `合計\n(共同${commonHol8}+外勞+${foreignHol8Extra})`,
+            '天數', `合計\n(${commonHol10}/天)`,
+            '天數', `合計\n(${commonHol12}/天)`,
+            '天數', `合計\n(${commonOt4}/次)`,
+            '', '總計', '備註'
+        ]);
+
+        sheet.mergeCells('A1:A2'); sheet.mergeCells('B1:B2');
+        sheet.mergeCells('C1:D1'); sheet.mergeCells('E1:F1');
+        sheet.mergeCells('G1:H1'); sheet.mergeCells('I1:J1');
+        sheet.mergeCells('K1:L1'); sheet.mergeCells('M1:M2');
+        sheet.mergeCells('N1:N2'); sheet.mergeCells('O1:O2');
+
+        sheet.columns = [
+            { key: 'emp_no',      width: 12 }, { key: 'name',       width: 12 },
+            { key: 'h0_days',     width: 9  }, { key: 'h0_total',   width: 16 },
+            { key: 'h8_days',     width: 9  }, { key: 'h8_total',   width: 18 },
+            { key: 'h10_days',    width: 10 }, { key: 'h10_total',  width: 14 },
+            { key: 'h12_days',    width: 10 }, { key: 'h12_total',  width: 14 },
+            { key: 'w4_days',     width: 10 }, { key: 'w4_total',   width: 14 },
+            { key: 'fixed',       width: 12 }, { key: 'grand_total',width: 12 },
+            { key: 'note',        width: 20 }
+        ];
+
+        const headerFill    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        const subHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A9E' } };
+        const headerFont  = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+        const centerAlign = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+        [row1, row2].forEach((r, idx) => {
+            r.height = 32;
+            r.eachCell(cell => {
+                cell.fill = idx === 0 ? headerFill : subHeaderFill;
+                cell.font = headerFont;
+                cell.alignment = centerAlign;
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+        });
+
+        const groupColors = {
+            C: 'FFE8F4FD', D: 'FFE8F4FD',
+            E: 'FFFFE0B2', F: 'FFFFE0B2',
+            G: 'FFFCE4EC', H: 'FFFCE4EC',
+            I: 'FFEDE7F6', J: 'FFEDE7F6',
+            K: 'FFE8F8FF', L: 'FFE8F8FF',
+        };
+
+        dataRows.forEach(r => {
+            const excelRow = sheet.addRow({
+                emp_no: r.emp_no, name: r.name,
+                h0_days: r.h0_days, h0_total: r.h0_total,
+                h8_days: r.h8_days, h8_total: r.h8_total,
+                h10_days: r.h10_days, h10_total: r.h10_total,
+                h12_days: r.h12_days, h12_total: r.h12_total,
+                w4_days: r.w4_days, w4_total: r.w4_total,
+                fixed: r.fixed, grand_total: r.grand_total, note: r.note
+            });
+            excelRow.height = 22;
+            const borderStyle = { style: 'thin', color: { argb: 'FFCCCCCC' } };
+            const thinBorder = { top: borderStyle, left: borderStyle, bottom: borderStyle, right: borderStyle };
+            excelRow.eachCell((cell, colNum) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = thinBorder;
+                const colLetter = String.fromCharCode(64 + colNum);
+                if (groupColors[colLetter]) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: groupColors[colLetter] } };
+                }
+            });
+            excelRow.getCell('grand_total').font = { bold: true };
+            excelRow.getCell('grand_total').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+            if (r.note) {
+                const noteCell = excelRow.getCell('note');
+                noteCell.font = { color: { argb: 'FFCC0000' }, bold: true };
+                noteCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3F3' } };
+            }
+            ['h0_days', 'h8_days', 'h10_days', 'h12_days'].forEach(k => {
+                if (r[k] === 0) {
+                    const col = { h0_days: 'C', h8_days: 'E', h10_days: 'G', h12_days: 'I' }[k];
+                    excelRow.getCell(col).font = { color: { argb: 'FFAAAAAA' } };
+                }
+            });
+        });
+
+        if (dataRows.length > 0) {
+            const startDataRow = 3;
+            const endDataRow = 2 + dataRows.length;
+            const footerRow = sheet.addRow([
+                '合計', '',
+                { formula: `SUM(C${startDataRow}:C${endDataRow})` },
+                { formula: `SUM(D${startDataRow}:D${endDataRow})` },
+                { formula: `SUM(E${startDataRow}:E${endDataRow})` },
+                { formula: `SUM(F${startDataRow}:F${endDataRow})` },
+                { formula: `SUM(G${startDataRow}:G${endDataRow})` },
+                { formula: `SUM(H${startDataRow}:H${endDataRow})` },
+                { formula: `SUM(I${startDataRow}:I${endDataRow})` },
+                { formula: `SUM(J${startDataRow}:J${endDataRow})` },
+                { formula: `SUM(K${startDataRow}:K${endDataRow})` },
+                { formula: `SUM(L${startDataRow}:L${endDataRow})` },
+                ''
+            ]);
+            footerRow.height = 22;
+            footerRow.font = { bold: true };
+            footerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            footerRow.eachCell(cell => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'medium' },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium' },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            sheet.mergeCells(`A${endDataRow + 1}:B${endDataRow + 1}`);
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=ot_textile_fr_${start.replace(/-/g, '')}_${end.replace(/-/g, '')}.xlsx`);
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) {

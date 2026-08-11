@@ -429,6 +429,7 @@
                 <th
                   style="padding: 8px 4px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: var(--glass-bg); z-index: 2; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space: nowrap; min-width: 90px;">
                   人員 (工號/姓名)</th>
+                <th style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">廠別</th>
                 <th style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">無住宿</th>
                 <th style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">返鄉中</th>
                 <th style="padding: 4px; border-bottom: 1px solid var(--glass-border);">返鄉區間</th>
@@ -437,7 +438,7 @@
             </thead>
             <tbody id="employee-hr-tbody" style="font-size: 1rem;">
               <tr>
-                <td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td>
+                <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">載入中...</td>
               </tr>
             </tbody>
           </table>
@@ -528,19 +529,27 @@
           <span style="color: var(--text-secondary);">~</span>
           <input type="date" id="finance-end" class="form-group"
             style="padding: 10px; border-radius: 5px; border: 1px solid var(--glass-border);">
-          <button onclick="previewFinance()" class="btn-primary" style="padding: 10px 20px;">🔍 查詢預覽</button>
+          <button onclick="previewFinance()" class="btn-primary" style="padding: 10px 20px;">🔍 訂餐查詢統計</button>
           <button onclick="syncFinanceData()" id="finance-sync-btn" class="btn-primary"
             style="padding: 10px 20px; background: #ff9800; border-color: #f57c00;">🔄 更新加班時數</button>
-          <button onclick="exportExcel()" class="btn-primary"
-            style="padding: 10px 20px; background: var(--color-green);">📥 匯出 Excel</button>
-          <button onclick="exportOtSummaryExcel()" class="btn-primary"
-            style="padding: 10px 20px; background: #6a0dad;">📊 匯出加班統計 Excel</button>
+          <select id="export-dropdown" class="btn-primary"
+            style="padding: 10px 20px; background: var(--color-green); cursor: pointer; text-align: center; transform: none !important; transition: none !important;"
+            onchange="if(this.value === 'exportExcel') exportExcel(); else if(this.value === 'exportOtSummaryExcel') exportOtSummaryExcel(); else if(this.value === 'exportOtLeatherTwExcel') exportOtLeatherTwExcel(); else if(this.value === 'exportOtLeatherFrExcel') exportOtLeatherFrExcel(); else if(this.value === 'exportOtTextileTwExcel') exportOtTextileTwExcel(); else if(this.value === 'exportOtTextileFrExcel') exportOtTextileFrExcel(); this.value=''">
+            <option value="" disabled selected hidden>📥 匯出excel</option>
+            <option value="exportExcel" style="color: black; background: white;">📥 匯出訂餐查詢統計excel</option>
+            <option value="exportOtSummaryExcel" style="color: black; background: white;">📊 匯出加班統計excel</option>
+            <option value="exportOtLeatherTwExcel" style="color: black; background: white;">🏭 匯出皮革本國加班統計excel</option>
+            <option value="exportOtLeatherFrExcel" style="color: black; background: white;">✈️ 匯出皮革外勞加班統計excel</option>
+            <option value="exportOtTextileTwExcel" style="color: black; background: white;">🧵 匯出紡織本國加班統計excel</option>
+            <option value="exportOtTextileFrExcel" style="color: black; background: white;">🌍 匯出紡織外勞加班統計excel</option>
+          </select>
           <button onclick="document.getElementById('rules-modal').style.display='flex'" class="btn-primary"
             title="查看津貼規則"
             style="padding: 10px; background: transparent; color: var(--text-color); border: 1px solid var(--glass-border); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer;">
             ❓
           </button>
         </div>
+
 
         <!-- ── 原有每日用餐預覽表 ── -->
         <div class="table-container" style="overflow-x: auto;">
@@ -817,7 +826,7 @@
         if (!hrTbody) return;
         hrTbody.innerHTML = '';
         if (foreignEmps.length === 0) {
-          hrTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">無外籍員工</td></tr>';
+          hrTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">無外籍員工</td></tr>';
           return;
         }
         foreignEmps.forEach(emp => {
@@ -826,6 +835,14 @@
             <td style="padding: 8px 4px; border-bottom: 1px solid var(--glass-border); position: sticky; left: 0; background: rgba(255,255,255,0.95); z-index: 1; backdrop-filter: blur(10px); box-shadow: 2px 0 5px rgba(0,0,0,0.05); white-space: nowrap; min-width: 90px;">
               <div style="font-weight: 600; font-size: 1.1rem;">${emp.name}</div>
               <div style="font-size: 0.85rem; color: var(--text-secondary);">${emp.emp_no || emp.emp_id}</div>
+            </td>
+            <td style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">
+              <select class="hr-division-select" data-empid="${emp.emp_id}" style="padding: 5px 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 0.9rem; cursor: pointer; background: ${emp.division === '皮革' ? '#fff3e0' : emp.division === '紡織' ? '#e3f2fd' : '#f5f5f5'};">
+                <option value="" ${!emp.division ? 'selected' : ''}>未設定</option>
+                <option value="皮革" ${emp.division === '皮革' ? 'selected' : ''}>🏭 皮革</option>
+                <option value="紡織" ${emp.division === '紡織' ? 'selected' : ''}>🧵 紡織</option>
+                <option value="其他" ${emp.division === '其他' ? 'selected' : ''}>其他</option>
+              </select>
             </td>
             <td style="padding: 4px; border-bottom: 1px solid var(--glass-border); text-align: center;">
               <input type="checkbox" class="hr-noacc-checkbox" data-empid="${emp.emp_id}" ${emp.no_accommodation === 1 ? 'checked' : ''} style="transform: scale(1.3); cursor: pointer; accent-color: var(--color-primary);">
@@ -888,6 +905,8 @@
           }
 
           try {
+            const divisionSel = document.querySelector(`.hr-division-select[data-empid="${empId}"]`);
+            const division = divisionSel ? divisionSel.value : '';
             const resp = await fetch(`/api/employees/${empId}/allowance-status`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -897,7 +916,8 @@
                 return_home_start: startStr,
                 return_home_end: endStr,
                 ramadan_start: rStartStr,
-                ramadan_end: rEndStr
+                ramadan_end: rEndStr,
+                division: division || null
               })
             });
             if (!resp.ok) throw new Error('Update failed');
@@ -907,6 +927,7 @@
           }
         };
 
+        document.querySelectorAll('.hr-division-select').forEach(sel => sel.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
         document.querySelectorAll('.hr-noacc-checkbox').forEach(cb => cb.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
         document.querySelectorAll('.hr-home-checkbox').forEach(cb => cb.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
         document.querySelectorAll('.hr-date-input').forEach(inp => inp.addEventListener('change', (e) => updateAllowanceStatus(e.target.dataset.empid)));
@@ -1481,6 +1502,34 @@
       const end = document.getElementById('finance-end').value;
       if (!start || !end) return alert('請選擇完整的查詢區間');
       window.location.href = `/api/export/excel/ot-summary?start=${start}&end=${end}`;
+    }
+
+    function exportOtLeatherTwExcel() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+      window.location.href = `/api/export/excel/ot-summary-leather-tw?start=${start}&end=${end}`;
+    }
+
+    function exportOtLeatherFrExcel() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+      window.location.href = `/api/export/excel/ot-summary-leather-fr?start=${start}&end=${end}`;
+    }
+
+    function exportOtTextileTwExcel() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+      window.location.href = `/api/export/excel/ot-summary-textile-tw?start=${start}&end=${end}`;
+    }
+
+    function exportOtTextileFrExcel() {
+      const start = document.getElementById('finance-start').value;
+      const end = document.getElementById('finance-end').value;
+      if (!start || !end) return alert('請選擇完整的查詢區間');
+      window.location.href = `/api/export/excel/ot-summary-textile-fr?start=${start}&end=${end}`;
     }
 
     // ── Allowance Panel ──
