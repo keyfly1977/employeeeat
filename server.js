@@ -196,6 +196,7 @@ async function getMealsFromLocal(dateStr, dbEmps, settings) {
                     optOutDinner: false,
                     noHolidayAllowance: false,
                     nationality: natStr,
+                    isHoliday: r.is_holiday === 1,
                     hasLunch: r.has_lunch === 1,
                     hasDinner: r.has_dinner === 1,
                     hasOt: (r.ot_hours || 0) > 0,
@@ -206,6 +207,43 @@ async function getMealsFromLocal(dateStr, dbEmps, settings) {
         });
     });
 }
+
+// Temporary debug endpoint to clean up holiday meals
+app.get('/api/debug/cleanup_holiday_meals', async (req, res) => {
+    try {
+        const db = require('./db');
+        const rows = await new Promise((resolve) => {
+            db.all("SELECT DISTINCT date FROM meal_records", (err, rows) => resolve(rows || []));
+        });
+
+        if (rows.length === 0) return res.json({ msg: "No records found" });
+
+        const years = [...new Set(rows.map(r => r.date.split('/')[0]))];
+        for (const y of years) {
+            await ensureHrCalendar(`${y}/01/01`, `${y}/12/31`);
+        }
+
+        let clearedCount = 0;
+        for (const r of rows) {
+            const dObj = new Date(r.date.replace(/-/g, '/'));
+            const dayOfWeek = dObj.getDay();
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const isHrHoliday = hrCalendarCache[r.date.replace(/-/g, '/')] === true;
+
+            if (isWeekend || isHrHoliday) {
+                await new Promise((resolve) => {
+                    db.run("UPDATE meal_records SET has_lunch = 0, has_dinner = 0 WHERE date = ?", [r.date], function(err) {
+                        clearedCount += this.changes;
+                        resolve();
+                    });
+                });
+            }
+        }
+        res.json({ success: true, clearedCount });
+    } catch (e) {
+        res.json({ error: e.message });
+    }
+});
 
 // Temporary debug endpoint
 app.get('/api/debug/hr', async (req, res) => {
@@ -466,8 +504,13 @@ async function getMealsForDate(targetDateStr, mainToken, otToken, employees, dbE
         // 晚餐預設為不吃，由各單位主管於每日下午前在系統上手動勾選 (預報)
         let hasDinner = false;
         
-        // 假日加班不供餐
-        if (isRestOvertime) {
+        const dObj = new Date(targetDateStr.replace(/-/g, '/'));
+        const dayOfWeek = dObj.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHrHoliday = hrCalendarCache[targetDateStr.replace(/-/g, '/')] === true;
+
+        // 假日加班或週休二日不供餐
+        if (isRestOvertime || isWeekend || isHrHoliday) {
             hasLunch = false;
         }
 
@@ -1168,9 +1211,11 @@ async function getFinanceData(startStr, endStr) {
                 else if (otHours >= 10) e.stats.hol_10hr++;
                 else if (otHours >= 8) e.stats.hol_8hr++;
                 else {
-                    e.stats.hol_no_ot++;
-                    // Foreign worker: holiday with no OT = special day, give 100
-                    if (e.is_foreign) e.stats.foreign_special_days++;
+                    if (e.is_foreign) {
+                        e.stats.hol_no_ot++;
+                        // Foreign worker: holiday with no OT = special day, give 100
+                        e.stats.foreign_special_days++;
+                    }
                 }
             } else {
                 // In return home period (holiday) = foreign special day
@@ -1253,7 +1298,14 @@ async function getFinanceData(startStr, endStr) {
         if (e.is_returning_home) note = '返鄉中';
         if (e.no_accommodation) note = (note ? note + ' ' : '') + '無住宿';
 
-        if (totalMeals === 0 && allowance === 0 && e.diet_type !== '齋戒' && !e.is_returning_home) return;
+        const hasWeekday = dates.some(d => {
+            const mDate = new Date(d.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            return !(hrCalendarCache[d.date.replace(/-/g, '/')] ?? isWeekend);
+        });
+        const hasActivity = totalMeals > 0 || e.stats.weekday_ot_4hr > 0 || e.stats.hol_8hr > 0 || e.stats.hol_10hr > 0 || e.stats.hol_12hr > 0 || e.stats.hol_no_ot > 0 || e.stats.foreign_special_days > 0 || hasWeekday;
+        if (!hasActivity && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 
         dates.forEach(d => {
             if (!e.days[d.date]) {
@@ -1420,7 +1472,7 @@ async function getOtSummaryData(startStr, endStr) {
     const rows = [];
     Object.values(empMap).forEach(e => {
         // 不給假日伙食津貼：返鄉中 or 無住宿
-        const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+        const noHolidayAllowance = e.no_accommodation;
 
         // 判定外勞資格：非返鄉且非無住宿的外勞
         const isEligibleForeigner = (!noHolidayAllowance && e.is_foreign);
@@ -1442,15 +1494,29 @@ async function getOtSummaryData(startStr, endStr) {
         const grandTotal = w4Total + h0Total + h8Total + h10Total + h12Total + fixed;
 
         // Skip employees with no data at all
-        if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+        const hasWeekday = dates.some(d => {
+            const mDate = new Date(d.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            return !(hrCalendarCache[d.date.replace(/-/g, '/')] ?? isWeekend);
+        });
+        const hasActivity = e.w4 > 0 || e.h0 > 0 || e.h8 > 0 || e.h10 > 0 || e.h12 > 0 || hasWeekday;
+        if (!hasActivity && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 
         let note = '';
-        if (e.is_returning_home && e.no_accommodation) {
-            note = '返鄉、外宿';
+        if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+            note = `返鄉 (${e.return_home_start}~${e.return_home_end})`;
         } else if (e.is_returning_home) {
             note = '返鄉';
-        } else if (e.no_accommodation) {
-            note = '外宿';
+        }
+
+        if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
+            const ramadanNote = `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            note = note ? `${note}、${ramadanNote}` : ramadanNote;
+        }
+
+        if (e.no_accommodation) {
+            note = note ? `${note}、外宿` : '外宿';
         }
 
         rows.push({
@@ -1962,7 +2028,7 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
 
         const dataRows = [];
         Object.values(empMap).forEach(e => {
-            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const noHolidayAllowance = e.no_accommodation;
             const w4Total  = e.w4  * commonOt4;
             const h0Total  = 0;  // 本國員工不計假日未加班補貼
             const h8Total  = e.h8  * commonHol8;
@@ -1971,7 +2037,14 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
             const fixed = noHolidayAllowance ? 0 : fixedAllowance;
             const grandTotal = w4Total + h8Total + h10Total + h12Total + fixed;
 
-            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+            const hasWeekday = dates.some(d => {
+            const mDate = new Date(d.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            return !(hrCalendarCache[d.date.replace(/-/g, '/')] ?? isWeekend);
+        });
+        const hasActivity = e.w4 > 0 || e.h0 > 0 || e.h8 > 0 || e.h10 > 0 || e.h12 > 0 || hasWeekday;
+        if (!hasActivity && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 
             let note = '';
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
@@ -2236,7 +2309,7 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
 
         const dataRows = [];
         Object.values(empMap).forEach(e => {
-            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const noHolidayAllowance = e.no_accommodation;
             const isEligibleForeigner = !noHolidayAllowance;
             const w4Total  = e.w4  * commonOt4;
             const h0Total  = e.h0  * (isEligibleForeigner ? foreignHolNoOt : 0);
@@ -2246,7 +2319,14 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
             const fixed = noHolidayAllowance ? 0 : fixedAllowance;
             const grandTotal = w4Total + h0Total + h8Total + h10Total + h12Total + fixed;
 
-            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+            const hasWeekday = dates.some(d => {
+            const mDate = new Date(d.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            return !(hrCalendarCache[d.date.replace(/-/g, '/')] ?? isWeekend);
+        });
+        const hasActivity = e.w4 > 0 || e.h0 > 0 || e.h8 > 0 || e.h10 > 0 || e.h12 > 0 || hasWeekday;
+        if (!hasActivity && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 
             let note = '';
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
@@ -2510,7 +2590,7 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
 
         const dataRows = [];
         Object.values(empMap).forEach(e => {
-            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const noHolidayAllowance = e.no_accommodation;
             const w4Total  = e.w4  * commonOt4;
             const h0Total  = 0;  // 本國員工不計假日未加班補貼
             const h8Total  = e.h8  * commonHol8;
@@ -2519,7 +2599,14 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
             const fixed = noHolidayAllowance ? 0 : fixedAllowance;
             const grandTotal = w4Total + h8Total + h10Total + h12Total + fixed;
 
-            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+            const hasWeekday = dates.some(d => {
+            const mDate = new Date(d.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            return !(hrCalendarCache[d.date.replace(/-/g, '/')] ?? isWeekend);
+        });
+        const hasActivity = e.w4 > 0 || e.h0 > 0 || e.h8 > 0 || e.h10 > 0 || e.h12 > 0 || hasWeekday;
+        if (!hasActivity && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 
             let note = '';
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
@@ -2782,7 +2869,7 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
 
         const dataRows = [];
         Object.values(empMap).forEach(e => {
-            const noHolidayAllowance = e.is_returning_home || e.no_accommodation;
+            const noHolidayAllowance = e.no_accommodation;
             const isEligibleForeigner = !noHolidayAllowance;
             const w4Total  = e.w4  * commonOt4;
             const h0Total  = e.h0  * (isEligibleForeigner ? foreignHolNoOt : 0);
@@ -2792,7 +2879,14 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
             const fixed = noHolidayAllowance ? 0 : fixedAllowance;
             const grandTotal = w4Total + h0Total + h8Total + h10Total + h12Total + fixed;
 
-            if (grandTotal === 0 && e.w4 === 0 && e.h0 === 0 && e.h8 === 0 && e.h10 === 0 && e.h12 === 0) return;
+            const hasWeekday = dates.some(d => {
+            const mDate = new Date(d.date);
+            const day = mDate.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            return !(hrCalendarCache[d.date.replace(/-/g, '/')] ?? isWeekend);
+        });
+        const hasActivity = e.w4 > 0 || e.h0 > 0 || e.h8 > 0 || e.h10 > 0 || e.h12 > 0 || hasWeekday;
+        if (!hasActivity && e.diet_type !== '齋戒' && !e.is_returning_home) return;
 
             let note = '';
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';

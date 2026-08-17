@@ -164,6 +164,12 @@
       box-shadow: 0 6px 20px rgba(48, 209, 88, 0.4);
     }
 
+    .table-responsive td,
+    .table-responsive th {
+      padding: 8px; /* Reduced from 12px to 8px to save space */
+      white-space: nowrap;
+    }
+
     .summary-box {
       margin-bottom: 20px;
       padding: 20px;
@@ -370,8 +376,8 @@
                     </div>
                   </th>
                   <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
-                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午餐</th>
-                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚餐</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午</th>
+                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚</th>
                 </tr>
               </thead>
               <tbody id="meals-tbody" style="font-size: 1.05rem;">
@@ -1818,7 +1824,7 @@
           // If settings changed, we should probably reload them but don't need to disrupt UI
           if (data.type === 'settings_changed') {
             Object.assign(currentSettings, data.payload);
-            renderTable(true);
+            renderTable(false); // Changed to false to force row UI update (e.g. unlocking buttons)
             return;
           }
 
@@ -1872,6 +1878,15 @@
         if (data.error) throw new Error(data.message);
 
         let filtered = data.data;
+
+        // Filter out inactive employees on holidays
+        filtered = filtered.filter(e => {
+          if (e.isHoliday) {
+            return e.hasLunch || e.hasDinner || e.hasOt || e.otHours > 0;
+          }
+          return true;
+        });
+
         if (qEmpno) filtered = filtered.filter(e => e.empNo && e.empNo.toLowerCase().includes(qEmpno));
         if (qName) filtered = filtered.filter(e => e.name && e.name.toLowerCase().includes(qName));
 
