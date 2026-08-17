@@ -62,7 +62,9 @@ db.serialize(() => {
 
     // 初始化預設設定
     const defaultSettings = {
-        'bento_price': '60'
+        'bento_price': '60',
+        'lock_time_lunch': '08:40',
+        'lock_time_dinner': '13:00'
     };
 
     const stmt = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);

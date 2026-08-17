@@ -402,9 +402,14 @@
             <input type="number" id="set-bento" required>
           </div>
 
-
-
-
+          <div class="form-group" style="margin-top: 15px;">
+            <label>午餐結單時間</label>
+            <input type="time" id="set-lock-lunch" required>
+          </div>
+          <div class="form-group" style="margin-top: 15px;">
+            <label>晚餐結單時間</label>
+            <input type="time" id="set-lock-dinner" required>
+          </div>
 
           <div style="margin-top: 30px; text-align: right;">
             <button type="submit" class="btn-primary">儲存設定</button>
@@ -719,7 +724,8 @@
       currentSettings = data;
 
       document.getElementById('set-bento').value = data.bento_price || 60;
-
+      document.getElementById('set-lock-lunch').value = data.lock_time_lunch || '08:40';
+      document.getElementById('set-lock-dinner').value = data.lock_time_dinner || '13:00';
     }
 
     let isGuardUnlocked = false;
@@ -940,8 +946,8 @@
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       currentSettings['bento_price'] = document.getElementById('set-bento').value;
-
-
+      currentSettings['lock_time_lunch'] = document.getElementById('set-lock-lunch').value;
+      currentSettings['lock_time_dinner'] = document.getElementById('set-lock-dinner').value;
 
       await fetch('/api/settings', {
         method: 'POST',
@@ -949,6 +955,7 @@
         body: JSON.stringify(currentSettings)
       });
       alert('設定已儲存！');
+      renderTable();
     });
 
     let allEmployeesData = [];
@@ -1032,6 +1039,21 @@
 
 
       // Set title with date
+      const todayObj = new Date();
+      const currentHour = todayObj.getHours();
+      const currentMin = todayObj.getMinutes();
+      const currentTime = currentHour * 60 + currentMin;
+
+      const lockTimeStrLunch = currentSettings['lock_time_lunch'] || '08:40';
+      const [lockHLunch, lockMLunch] = lockTimeStrLunch.split(':').map(Number);
+      const lockTimeLunch = lockHLunch * 60 + lockMLunch;
+      const isLunchLocked = currentTime >= lockTimeLunch;
+
+      const lockTimeStrDinner = currentSettings['lock_time_dinner'] || '13:00';
+      const [lockHDinner, lockMDinner] = lockTimeStrDinner.split(':').map(Number);
+      const lockTimeDinner = lockHDinner * 60 + lockMDinner;
+      const isDinnerLocked = currentTime >= lockTimeDinner;
+
       const divPrefix = currentDivision === 'all' ? '' : (currentDivision === '其他' ? '未分' : currentDivision);
       const todayDateStr = formatROCDate(new Date());
       document.getElementById('list-title').innerHTML = `📋 ${divPrefix}今日名單 <span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">(${todayDateStr})</span>`;
@@ -1162,8 +1184,8 @@
               </div>
             </td>
             <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);">${statusHtml}</td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasLunch ? 'checked' : ''} onchange="updateMeal(this, '${emp.empId}', 'lunch')"></td>
-            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasDinner ? 'checked' : ''} onchange="updateMeal(this, '${emp.empId}', 'dinner')"></td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasLunch ? 'checked' : ''} onchange="updateMeal(this, '${emp.empId}', 'lunch')" ${isLunchLocked ? 'disabled title="午餐已結單鎖定"' : ''}></td>
+            <td style="padding: 15px; border-bottom: 1px solid var(--glass-border);"><input type="checkbox" class="toggle-checkbox" ${emp.hasDinner ? 'checked' : ''} onchange="updateMeal(this, '${emp.empId}', 'dinner')" ${isDinnerLocked ? 'disabled title="晚餐已結單鎖定"' : ''}></td>
           `;
         return tr;
       };
@@ -1317,7 +1339,7 @@
           fetch('/api/meals/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ empId: emp.empId, hasLunch: emp.hasLunch, hasDinner: emp.hasDinner })
+            body: JSON.stringify({ empId: emp.empId, hasLunch: emp.hasLunch, hasDinner: emp.hasDinner, mealType })
           });
         } catch (e) { }
       }
@@ -1695,6 +1717,19 @@
         }
       }
 
+      // 檢查晚餐是否有資料
+      if (typeof currentFilterStatus !== 'undefined' && currentFilterStatus.startsWith('dinner')) {
+        const hasAnyDinner = employeesData.some(emp => {
+          const matchDiv = currentDivision === 'all' || emp.division === currentDivision;
+          return matchDiv && emp.hasDinner;
+        });
+        
+        if (!hasAnyDinner) {
+          alert('目前晚餐名單沒有任何資料（沒有人打勾晚餐），無法列印！');
+          return;
+        }
+      }
+
       const oldText = btn.innerHTML;
       btn.innerHTML = '🖨️ 傳送中...';
       btn.disabled = true;
@@ -1782,7 +1817,8 @@
 
           // If settings changed, we should probably reload them but don't need to disrupt UI
           if (data.type === 'settings_changed') {
-            // For now just ignore or optionally reload settings
+            Object.assign(currentSettings, data.payload);
+            renderTable(true);
             return;
           }
 

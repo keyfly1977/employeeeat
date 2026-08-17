@@ -1122,6 +1122,9 @@ async function getFinanceData(startStr, endStr) {
                 department: dbEmp.department,
                 is_foreign: dbEmp.is_foreign === 1,
                 is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                 return_home_start: dbEmp.return_home_start,
                 return_home_end: dbEmp.return_home_end,
                 no_accommodation: dbEmp.no_accommodation === 1,
@@ -1341,6 +1344,8 @@ async function getOtSummaryData(startStr, endStr) {
     // Foreign-specific Allowances
     const foreignHolNoOt = parseInt(s['foreign_hol_no_ot_allowance'] || 100);
     const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+        const ramadanStartStr = s['ramadan_start'];
+        const ramadanEndStr = s['ramadan_end'];
 
     const dates = getDatesInRange(startStr, endStr);
     if (dates.length === 0) return { rows: [], settings: {} };
@@ -1369,7 +1374,13 @@ async function getOtSummaryData(startStr, endStr) {
                 department: dbEmp.department,
                 is_foreign: dbEmp.is_foreign === 1,
                 is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                 is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                 no_accommodation: dbEmp.no_accommodation === 1,
                 w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
             };
@@ -1890,6 +1901,8 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
         const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
         const foreignHolNoOt   = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+        const ramadanStartStr = s['ramadan_start'];
+        const ramadanEndStr = s['ramadan_end'];
 
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
@@ -1922,6 +1935,9 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
                     department: dbEmp.department,
                     is_foreign: false,
                     is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -1961,6 +1977,13 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
             else if (e.is_returning_home) note = '返鄉';
             else if (e.no_accommodation) note = '外宿';
+
+            if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+                note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
+            }
+            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
+                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            }
 
             dataRows.push({
                 emp_no: e.emp_no, name: e.name, department: e.department,
@@ -2150,6 +2173,8 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
         const commonHol12     = parseInt(s['common_hol12_allowance']  || 225);
         const foreignHolNoOt  = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+        const ramadanStartStr = s['ramadan_start'];
+        const ramadanEndStr = s['ramadan_end'];
 
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
@@ -2182,6 +2207,9 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
                     department: dbEmp.department,
                     is_foreign: true,
                     is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2224,6 +2252,13 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
             else if (e.is_returning_home) note = '返鄉';
             else if (e.no_accommodation) note = '外宿';
+
+            if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+                note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
+            }
+            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
+                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            }
 
             dataRows.push({
                 emp_no: e.emp_no, name: e.name, department: e.department,
@@ -2414,6 +2449,8 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
         const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
         const foreignHolNoOt   = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+        const ramadanStartStr = s['ramadan_start'];
+        const ramadanEndStr = s['ramadan_end'];
 
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
@@ -2446,6 +2483,9 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
                     department: dbEmp.department,
                     is_foreign: false,
                     is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2485,6 +2525,13 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
             else if (e.is_returning_home) note = '返鄉';
             else if (e.no_accommodation) note = '外宿';
+
+            if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+                note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
+            }
+            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
+                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            }
 
             dataRows.push({
                 emp_no: e.emp_no, name: e.name, department: e.department,
@@ -2673,6 +2720,8 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
         const commonHol12     = parseInt(s['common_hol12_allowance']  || 225);
         const foreignHolNoOt  = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
+        const ramadanStartStr = s['ramadan_start'];
+        const ramadanEndStr = s['ramadan_end'];
 
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
@@ -2704,6 +2753,9 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
                     department: dbEmp.department,
                     is_foreign: true,
                     is_returning_home: dbEmp.is_returning_home === 1,
+                    return_home_start: dbEmp.return_home_start,
+                    return_home_end: dbEmp.return_home_end,
+                    diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2746,6 +2798,13 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
             if (e.is_returning_home && e.no_accommodation) note = '返鄉、外宿';
             else if (e.is_returning_home) note = '返鄉';
             else if (e.no_accommodation) note = '外宿';
+
+            if (e.is_returning_home && e.return_home_start && e.return_home_end) {
+                note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
+            }
+            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
+                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            }
 
             dataRows.push({
                 emp_no: e.emp_no, name: e.name, department: e.department,
