@@ -182,7 +182,12 @@
       box-shadow: var(--glass-shadow);
       border: 1px solid var(--glass-border);
     }
-  </style>
+  
+            .table-container table tbody tr:hover > td,
+            .table-container table tbody tr:hover > th {
+              background-color: rgba(10, 132, 255, 0.08) !important;
+            }
+</style>
 </head>
 
 <body>
@@ -375,9 +380,9 @@
                         只會影響當天<br><br>💡 「預設不訂晚餐」同理，<br>僅有加班時才會自動訂晚餐。</span>
                     </div>
                   </th>
-                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
-                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午</th>
-                  <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚</th>
+                  <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
+                  <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午</th>
+                  <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚</th>
                 </tr>
               </thead>
               <tbody id="meals-tbody" style="font-size: 1.05rem;">
@@ -661,10 +666,10 @@
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">工號</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">姓名</th>
                 <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">部門</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">類別</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午餐</th>
-                <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚餐</th>
+                <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">類別</th>
+                <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">打卡狀態</th>
+                <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">午餐</th>
+                <th class="sticky-top" style="padding: 15px; border-bottom: 1px solid var(--glass-border);">晚餐</th>
               </tr>
             </thead>
             <tbody id="query-tbody" style="font-size: 1.05rem;">
@@ -1644,28 +1649,28 @@
 
         thead.innerHTML = `
           <tr>
-            <th rowspan="2" style="${thStyleBg('#1e3a5f')}">工號</th>
-            <th rowspan="2" style="${thStyleBg('#1e3a5f')}">姓名</th>
-            <th colspan="2" style="${thStyleBg('#2d7dd2')}">假日未加班<br><small>(外勞${cfg.foreignHolNoOt}/天)</small></th>
-            <th colspan="2" style="${thStyleBg('#e67e22')}">假日加班 8hr<br><small>(共同${cfg.commonHol8}外勞+${cfg.foreignHol8Extra})</small></th>
-            <th colspan="2" style="${thStyleBg('#c0392b')}">假日加班 10hr<br><small>(${cfg.commonHol10})</small></th>
-            <th colspan="2" style="${thStyleBg('#8e44ad')}">假日加班 12hr<br><small>(${cfg.commonHol12})</small></th>
-            <th colspan="2" style="${thStyleBg('#00a8ff')}">平日加班 4hr+<br><small>(${cfg.commonOt4}/次)</small></th>
-            <th rowspan="2" style="${thStyleBg('#27ae60')}">固定津貼<br><small>(${cfg.fixedAllowance}/人)</small></th>
-            <th rowspan="2" style="${thStyleBg('#1e3a5f')}">總計</th>
-            <th rowspan="2" style="${thStyleBg('#555')}">備註</th>
+            <th class="sticky-top" rowspan="2" style="${thStyleBg('#1e3a5f')}">工號</th>
+            <th class="sticky-top" rowspan="2" style="${thStyleBg('#1e3a5f')}">姓名</th>
+            <th class="sticky-top" colspan="2" style="${thStyleBg('#2d7dd2')}">假日未加班<br><small>(外勞${cfg.foreignHolNoOt}/天)</small></th>
+            <th class="sticky-top" colspan="2" style="${thStyleBg('#e67e22')}">假日加班 8hr<br><small>(共同${cfg.commonHol8}外勞+${cfg.foreignHol8Extra})</small></th>
+            <th class="sticky-top" colspan="2" style="${thStyleBg('#c0392b')}">假日加班 10hr<br><small>(${cfg.commonHol10})</small></th>
+            <th class="sticky-top" colspan="2" style="${thStyleBg('#8e44ad')}">假日加班 12hr<br><small>(${cfg.commonHol12})</small></th>
+            <th class="sticky-top" colspan="2" style="${thStyleBg('#00a8ff')}">平日加班 4hr+<br><small>(${cfg.commonOt4}/次)</small></th>
+            <th class="sticky-top" rowspan="2" style="${thStyleBg('#27ae60')}">固定津貼<br><small>(${cfg.fixedAllowance}/人)</small></th>
+            <th class="sticky-top" rowspan="2" style="${thStyleBg('#1e3a5f')}">總計</th>
+            <th class="sticky-top" rowspan="2" style="${thStyleBg('#555')}">備註</th>
           </tr>
           <tr>
-            <th style="${thStyle} background:#d6eaf8;">天數</th>
-            <th style="${thStyle} background:#d6eaf8;">合計</th>
-            <th style="${thStyle} background:#fdebd0;">天數</th>
-            <th style="${thStyle} background:#fdebd0;">合計</th>
-            <th style="${thStyle} background:#fadbd8;">天數</th>
-            <th style="${thStyle} background:#fadbd8;">合計</th>
-            <th style="${thStyle} background:#e8daef;">天數</th>
-            <th style="${thStyle} background:#e8daef;">合計</th>
-            <th style="${thStyle} background:#cceeff;">天數</th>
-            <th style="${thStyle} background:#cceeff;">合計</th>
+            <th class="sticky-top-2" style="${thStyle} background:#d6eaf8;">天數</th>
+            <th class="sticky-top-2" style="${thStyle} background:#d6eaf8;">合計</th>
+            <th class="sticky-top-2" style="${thStyle} background:#fdebd0;">天數</th>
+            <th class="sticky-top-2" style="${thStyle} background:#fdebd0;">合計</th>
+            <th class="sticky-top-2" style="${thStyle} background:#fadbd8;">天數</th>
+            <th class="sticky-top-2" style="${thStyle} background:#fadbd8;">合計</th>
+            <th class="sticky-top-2" style="${thStyle} background:#e8daef;">天數</th>
+            <th class="sticky-top-2" style="${thStyle} background:#e8daef;">合計</th>
+            <th class="sticky-top-2" style="${thStyle} background:#cceeff;">天數</th>
+            <th class="sticky-top-2" style="${thStyle} background:#cceeff;">合計</th>
           </tr>`;
 
         if (!data.rows || data.rows.length === 0) {

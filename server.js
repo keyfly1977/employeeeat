@@ -1124,8 +1124,6 @@ async function getFinanceData(startStr, endStr) {
     const s = {};
     settingRows.forEach(r => s[r.key] = r.value);
     
-    const ramadanStartStr = s['ramadan_start'];
-    const ramadanEndStr = s['ramadan_end'];
     const bentoPrice = parseInt(s['bento_price'] || 60);
     const mealSubsidy = parseInt(s['meal_subsidy_per_meal'] || 70);  // company subsidy per meal eaten
     const fixedAllowance = parseInt(s['fixed_monthly_allowance'] || 300); // fixed 300 per month
@@ -1168,11 +1166,15 @@ async function getFinanceData(startStr, endStr) {
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                 return_home_start: dbEmp.return_home_start,
                 return_home_end: dbEmp.return_home_end,
                 no_accommodation: dbEmp.no_accommodation === 1,
                 no_holiday_allowance: false,
                 diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                 stats: { lunch: 0, dinner: 0, normal_days: 0, hol_no_ot: 0, hol_8hr: 0, hol_10hr: 0, hol_12hr: 0, weekday_ot_4hr: 0, free_dinners: 0, weekday_meals: 0, foreign_special_days: 0 },
                 days: {}
             };
@@ -1242,9 +1244,9 @@ async function getFinanceData(startStr, endStr) {
         let cellNote = '';
         if (inReturnHomePeriod) cellNote = '返鄉';
                 else if (e.diet_type === '齋戒') {
-            if (ramadanStartStr && ramadanEndStr) {
-                const rs = new Date(ramadanStartStr.replace(/-/g, '/'));
-                const re = new Date(ramadanEndStr.replace(/-/g, '/'));
+            if (e.ramadan_start && e.ramadan_end) {
+                const rs = new Date(e.ramadan_start.replace(/-/g, '/'));
+                const re = new Date(e.ramadan_end.replace(/-/g, '/'));
                 if (mDate >= rs && mDate <= re) cellNote = '齋戒';
             }
         }
@@ -1320,9 +1322,9 @@ async function getFinanceData(startStr, endStr) {
                     if (mDate >= sDate && mDate <= eDate) cellNote = '返鄉';
                 }
                                 if (!cellNote && e.diet_type === '齋戒') {
-                    if (ramadanStartStr && ramadanEndStr) {
-                        const rs = new Date(ramadanStartStr.replace(/-/g, '/'));
-                        const re = new Date(ramadanEndStr.replace(/-/g, '/'));
+                    if (e.ramadan_start && e.ramadan_end) {
+                        const rs = new Date(e.ramadan_start.replace(/-/g, '/'));
+                        const re = new Date(e.ramadan_end.replace(/-/g, '/'));
                         if (mDate >= rs && mDate <= re) cellNote = '齋戒';
                     }
                 }
@@ -1396,10 +1398,7 @@ async function getOtSummaryData(startStr, endStr) {
     // Foreign-specific Allowances
     const foreignHolNoOt = parseInt(s['foreign_hol_no_ot_allowance'] || 100);
     const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
-        const ramadanStartStr = s['ramadan_start'];
-        const ramadanEndStr = s['ramadan_end'];
-
-    const dates = getDatesInRange(startStr, endStr);
+        const dates = getDatesInRange(startStr, endStr);
     if (dates.length === 0) return { rows: [], settings: {} };
 
     const placeholders = dates.map(() => '?').join(',');
@@ -1429,10 +1428,14 @@ async function getOtSummaryData(startStr, endStr) {
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                 is_returning_home: dbEmp.is_returning_home === 1,
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                 no_accommodation: dbEmp.no_accommodation === 1,
                 w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
             };
@@ -1510,8 +1513,8 @@ async function getOtSummaryData(startStr, endStr) {
             note = '返鄉';
         }
 
-        if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
-            const ramadanNote = `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+        if (e.diet_type === '齋戒' && e.ramadan_start && e.ramadan_end) {
+            const ramadanNote = `齋戒 (${e.ramadan_start}~${e.ramadan_end})`;
             note = note ? `${note}、${ramadanNote}` : ramadanNote;
         }
 
@@ -1665,7 +1668,7 @@ app.get('/api/export/excel', async (req, res) => {
                 const bg = dayData.note === '返鄉' ? 'FFFFF9C4' : 
                            dayData.note === '齋戒' ? 'FFAF52DE' : 
                            dayData.note === '請假' ? 'FFFFE0B2' : 
-                           d.isHoliday ? 'FFF2F2F2' : null;
+                           d.isHoliday ? 'FFFFC0CB' : null;
                 
                 if (bg) {
                     const lCell = excelRow.getCell(cellColIndex);
@@ -1967,9 +1970,6 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
         const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
         const foreignHolNoOt   = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
-        const ramadanStartStr = s['ramadan_start'];
-        const ramadanEndStr = s['ramadan_end'];
-
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
 
@@ -2004,6 +2004,8 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2054,8 +2056,8 @@ app.get('/api/export/excel/ot-summary-leather-tw', async (req, res) => {
             if (e.is_returning_home && e.return_home_start && e.return_home_end) {
                 note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
             }
-            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
-                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            if (e.diet_type === '齋戒' && e.ramadan_start && e.ramadan_end) {
+                note += (note ? ' ' : '') + `齋戒 (${e.ramadan_start}~${e.ramadan_end})`;
             }
 
             dataRows.push({
@@ -2246,9 +2248,6 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
         const commonHol12     = parseInt(s['common_hol12_allowance']  || 225);
         const foreignHolNoOt  = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
-        const ramadanStartStr = s['ramadan_start'];
-        const ramadanEndStr = s['ramadan_end'];
-
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
 
@@ -2283,6 +2282,8 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2336,8 +2337,8 @@ app.get('/api/export/excel/ot-summary-leather-fr', async (req, res) => {
             if (e.is_returning_home && e.return_home_start && e.return_home_end) {
                 note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
             }
-            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
-                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            if (e.diet_type === '齋戒' && e.ramadan_start && e.ramadan_end) {
+                note += (note ? ' ' : '') + `齋戒 (${e.ramadan_start}~${e.ramadan_end})`;
             }
 
             dataRows.push({
@@ -2529,9 +2530,6 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
         const commonHol12 = parseInt(s['common_hol12_allowance'] || 225);
         const foreignHolNoOt   = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
-        const ramadanStartStr = s['ramadan_start'];
-        const ramadanEndStr = s['ramadan_end'];
-
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
 
@@ -2566,6 +2564,8 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2616,8 +2616,8 @@ app.get('/api/export/excel/ot-summary-textile-tw', async (req, res) => {
             if (e.is_returning_home && e.return_home_start && e.return_home_end) {
                 note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
             }
-            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
-                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            if (e.diet_type === '齋戒' && e.ramadan_start && e.ramadan_end) {
+                note += (note ? ' ' : '') + `齋戒 (${e.ramadan_start}~${e.ramadan_end})`;
             }
 
             dataRows.push({
@@ -2807,9 +2807,6 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
         const commonHol12     = parseInt(s['common_hol12_allowance']  || 225);
         const foreignHolNoOt  = parseInt(s['foreign_hol_no_ot_allowance']  || 100);
         const foreignHol8Extra = parseInt(s['foreign_hol8_extra_allowance'] || 50);
-        const ramadanStartStr = s['ramadan_start'];
-        const ramadanEndStr = s['ramadan_end'];
-
         const dates = getDatesInRange(startStr, endStr);
         if (dates.length === 0) return res.status(400).json({ error: '日期範圍無效' });
 
@@ -2843,6 +2840,8 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
                     return_home_start: dbEmp.return_home_start,
                     return_home_end: dbEmp.return_home_end,
                     diet_type: dbEmp.diet_type || (dbEmp.nationality === '印尼' ? '齋戒' : '葷食'),
+                ramadan_start: dbEmp.ramadan_start,
+                ramadan_end: dbEmp.ramadan_end,
                     no_accommodation: dbEmp.no_accommodation === 1,
                     w4: 0, h0: 0, h8: 0, h10: 0, h12: 0
                 };
@@ -2896,8 +2895,8 @@ app.get('/api/export/excel/ot-summary-textile-fr', async (req, res) => {
             if (e.is_returning_home && e.return_home_start && e.return_home_end) {
                 note += (note === '返鄉' || note === '返鄉、外宿' ? ` (${e.return_home_start}~${e.return_home_end})` : ` 返鄉(${e.return_home_start}~${e.return_home_end})`);
             }
-            if (e.diet_type === '齋戒' && ramadanStartStr && ramadanEndStr) {
-                note += (note ? ' ' : '') + `齋戒 (${ramadanStartStr}~${ramadanEndStr})`;
+            if (e.diet_type === '齋戒' && e.ramadan_start && e.ramadan_end) {
+                note += (note ? ' ' : '') + `齋戒 (${e.ramadan_start}~${e.ramadan_end})`;
             }
 
             dataRows.push({
